@@ -74,6 +74,10 @@ def fetch_today_events(calendar_person_map: dict, day: datetime = None):
             location = item.get("location")
             title = item.get("summary", "")
             title_lower = title.lower()
+            # Discard virtual/URL locations (Zoom, Teams, Meet links) — not driveable.
+            if location and location.startswith(("http://", "https://", "zoom.us",
+                                                  "teams.microsoft.com", "meet.google.com")):
+                location = None
             if not location:
                 for keyword, address in config.KNOWN_LOCATIONS.items():
                     if keyword in title_lower:

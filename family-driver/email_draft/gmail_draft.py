@@ -56,7 +56,7 @@ def _build_message(subject: str, body: str, to: str) -> str:
 
 def create_plan_draft(subject: str, body: str, to_email: str = None) -> str:
     """Creates a Gmail draft and returns its draft ID. Does not send it."""
-    to_email = to_email or config.PLAN_RECIPIENT_EMAIL
+    to_email = to_email or (config.PLAN_RECIPIENTS[0] if config.PLAN_RECIPIENTS else "")
     creds = _get_credentials()
     service = build("gmail", "v1", credentials=creds)
     raw = _build_message(subject, body, to_email)

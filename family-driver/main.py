@@ -114,8 +114,7 @@ def main():
     elif args.draft_email:
         html_body = render_plan_html(legs, [], day)
         draft_id = create_plan_draft(subject, html_body)
-        print(f"\nGmail draft created (id={draft_id}) — addressed to "
-              f"{config.PLAN_RECIPIENT_EMAIL}. Review and send it from Gmail.")
+        print(f"\nGmail draft created (id={draft_id}). Review and send it from Gmail.")
 
 
 if __name__ == "__main__":
