@@ -65,8 +65,8 @@ def fetch_today_events(calendar_person_map: dict, day: datetime = None):
         for item in resp.get("items", []):
             start_raw = item["start"].get("dateTime") or item["start"].get("date")
             end_raw = item["end"].get("dateTime") or item["end"].get("date")
-            start = datetime.fromisoformat(start_raw)
-            end = datetime.fromisoformat(end_raw)
+            start = datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
+            end = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
             if start.tzinfo is None:  # all-day event
                 start = start.replace(tzinfo=timezone.utc)
                 end = end.replace(tzinfo=timezone.utc)
