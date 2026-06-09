@@ -29,21 +29,14 @@ from planner.timeline import build_timeline, render_timeline, render_plan, rende
 from planner.driving_plan import build_driving_plan, summarize_conflicts
 from email_draft.gmail_draft import create_plan_draft, send_plan
 
-# --- EDIT THESE to match your household's actual calendars ---------------
-# Google Calendar: map each calendar ID to the family member it represents.
-# "primary" = the calendar of whichever Google account is authenticated.
-GOOGLE_CALENDAR_MAP = {
-    "primary": "Ryan",
-    "komakisera@gmail.com": "Komaki",
-    "family15248054468566471222@group.calendar.google.com": "Family",
-    "in2gcrl2omq7gt913gcebgbghsul01lf@import.calendar.google.com": "Sanjo",
-}
+# Calendar maps are loaded from .env (GOOGLE_CALENDAR_MAP, OUTLOOK_CALENDAR_MAP).
+# See .env.example for the format.
+GOOGLE_CALENDAR_MAP = config.GOOGLE_CALENDAR_MAP
 
 # Outlook / Microsoft 365: same idea, via Microsoft Graph.
 OUTLOOK_CALENDAR_MAP = {
     "me": "Komaki",
 }
-# --------------------------------------------------------------------------
 
 
 def gather_events(day):

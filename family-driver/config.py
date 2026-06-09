@@ -25,8 +25,20 @@ HOME_ADDRESS = os.getenv("HOME_ADDRESS", "")
 DRIVERS = _list("DRIVERS", "Komaki,Ryan")
 NON_DRIVERS = _list("NON_DRIVERS", "Oto,Lara,Sanjo")
 
-PLAN_RECIPIENT_EMAIL = os.getenv("PLAN_RECIPIENT_EMAIL", "komakisera@gmail.com")
-PLAN_RECIPIENTS = _list("PLAN_RECIPIENTS", "komakisera@gmail.com,apnakashima@gmail.com")
+PLAN_RECIPIENTS = _list("PLAN_RECIPIENTS", "")
+
+# Google Calendar: comma-separated list of calendarId:PersonName pairs.
+# e.g. "primary:Ryan,komakisera@gmail.com:Komaki,abc123@group.calendar.google.com:Family"
+def _parse_calendar_map(raw: str) -> dict:
+    result = {}
+    for entry in raw.split(","):
+        entry = entry.strip()
+        if ":" in entry:
+            cal_id, _, name = entry.partition(":")
+            result[cal_id.strip()] = name.strip()
+    return result
+
+GOOGLE_CALENDAR_MAP = _parse_calendar_map(os.getenv("GOOGLE_CALENDAR_MAP", ""))
 
 # How many minutes a driver needs to be at a location before an event starts
 ARRIVAL_BUFFER_MINUTES = int(os.getenv("ARRIVAL_BUFFER_MINUTES", "10"))
