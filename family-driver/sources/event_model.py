@@ -15,6 +15,7 @@ class Event:
     end: datetime          # timezone-aware
     location: Optional[str] = None
     needs_ride: bool = True  # False for e.g. all-day reminders with no location
+    virtual: bool = False    # Zoom/Teams/Meet — no driving, no location question
     raw: dict = field(default_factory=dict)
 
     def overlaps(self, other: "Event") -> bool:

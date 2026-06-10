@@ -1,0 +1,106 @@
+"""Per-day event overrides learned from email replies.
+
+When the plan email asks "where is Komaki lunch?" and someone replies
+"Komaki lunch: 1234 Lincoln Ave, San Jose", the answer is stored here and
+applied on the next plan build for that date.
+
+Storage: overrides.json in the project root:
+  { "2026-06-10": { "komaki lunch": {"location": "...", "person": "..."} } }
+"""
+import json
+import os
+
+import config
+
+OVERRIDES_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "overrides.json")
+
+
+def _load() -> dict:
+    try:
+        with open(OVERRIDES_FILE) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _save(data: dict):
+    with open(OVERRIDES_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def get_for_day(day_key: str) -> dict:
+    return _load().get(day_key, {})
+
+
+def set_override(day_key: str, title: str, *, location: str = None, person: str = None):
+    data = _load()
+    entry = data.setdefault(day_key, {}).setdefault(title.lower().strip(), {})
+    if location:
+        entry["location"] = location
+    if person:
+        entry["person"] = person
+    _save(data)
+
+
+def apply_overrides(events, day_key: str):
+    """Mutate events in place with any stored answers for this day."""
+    day_overrides = get_for_day(day_key)
+    if not day_overrides:
+        return events
+    for e in events:
+        for title_key, fix in day_overrides.items():
+            if title_key in e.title.lower():
+                if fix.get("location"):
+                    e.location = fix["location"]
+                    e.needs_ride = True
+                if fix.get("person"):
+                    e.person = fix["person"]
+                break
+    return events
+
+
+def collect_questions(events):
+    """Return (event, kind) pairs the email should ask about.
+
+    kind = "where"  — family member event with no driveable location
+    kind = "who"    — event whose attendee couldn't be determined (e.g. on the
+                      Family calendar with no child named in the title)
+    """
+    family = set(config.DRIVERS) | set(config.NON_DRIVERS)
+    questions = []
+    for e in events:
+        if e.virtual:
+            continue
+        if e.person not in family:
+            questions.append((e, "who"))
+        elif not e.location:
+            questions.append((e, "where"))
+    return questions
+
+
+def parse_reply_lines(text: str, events) -> list:
+    """Parse a reply body into (event_title, field, value) answers.
+
+    Lines look like 'Komaki lunch: 1234 Lincoln Ave' (location) or
+    'Playdate: Lara' (attendee, when the value is a family member's name).
+    Returns list of (title, {"location": ...} or {"person": ...}).
+    """
+    family = {n.lower(): n for n in (list(config.DRIVERS) + list(config.NON_DRIVERS))}
+    answers = []
+    for line in text.splitlines():
+        line = line.strip().lstrip(">").strip()
+        if not line or ":" not in line:
+            continue
+        title_part, _, value = line.partition(":")
+        title_part, value = title_part.strip().lower(), value.strip()
+        if not value:
+            continue
+        for e in events:
+            et = e.title.lower()
+            if title_part and (title_part in et or et in title_part):
+                if value.lower() in family:
+                    answers.append((e.title, {"person": family[value.lower()]}))
+                else:
+                    answers.append((e.title, {"location": value}))
+                break
+    return answers

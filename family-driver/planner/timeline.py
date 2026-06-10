@@ -41,7 +41,8 @@ def render_timeline(events: List[Event]) -> str:
     return "\n".join(lines)
 
 
-def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime) -> str:
+def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
+                     questions: list = None) -> str:
     """Render the driving plan as an HTML email body."""
     rows = []
 
@@ -55,9 +56,38 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime) -> st
     )
     rows.append('<hr style="border:none;border-top:2px solid #eee;margin:8px 0">')
 
+    def _questions_html():
+        if not questions:
+            return
+        rows.append(
+            '<h3 style="font-family:sans-serif;color:#b8860b;margin:16px 0 4px">'
+            '❓ Open questions</h3>'
+        )
+        for ev, kind in questions:
+            s = _local(ev.start)
+            if kind == "who":
+                ask = "who is going?"
+            else:
+                ask = "where is it? (no address on the calendar)"
+            rows.append(
+                f'<div style="margin:4px 0">📅 <strong>{ev.title}</strong>'
+                f' ({_fmt(s)}, {ev.person}) — {ask}</div>'
+            )
+        rows.append(
+            '<p style="font-family:sans-serif;font-size:12px;color:#888;margin:6px 0 0">'
+            'Reply to this email with one line per answer, like<br>'
+            '<code>Komaki lunch: 1234 Lincoln Ave, San Jose</code> &nbsp;(location)<br>'
+            '<code>Playdate: Lara</code> &nbsp;(attendee)<br>'
+            'Replies are checked every 30 minutes and an updated plan is sent back '
+            'on this thread.</p>'
+        )
+
     if not legs:
         rows.append('<p style="font-family:sans-serif;color:#555">No driving needed today.</p>')
-        return "\n".join(rows)
+        _questions_html()
+        return ('<html><body style="font-family:sans-serif;font-size:14px;color:#333;'
+                'max-width:600px;margin:0 auto;padding:16px">\n'
+                + "\n".join(rows) + "\n</body></html>")
 
     def _maps_link(origin, destination):
         params = urlencode({
@@ -158,6 +188,8 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime) -> st
                 f'📅 <em>{leg.event.title}</em> ({_fmt(es)}–{_fmt(ee)})</span>',
                 indent=True
             )
+
+    _questions_html()
 
     rows.append('<hr style="border:none;border-top:1px solid #eee;margin:12px 0">')
     uber_legs = [l for l in legs if l.uber]

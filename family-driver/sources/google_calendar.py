@@ -17,6 +17,7 @@ from sources.event_model import Event
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
 
@@ -75,9 +76,16 @@ def fetch_today_events(calendar_person_map: dict, day: datetime = None):
             title = item.get("summary", "")
             title_lower = title.lower()
             # Discard virtual/URL locations (Zoom, Teams, Meet links) — not driveable.
-            if location and location.startswith(("http://", "https://", "zoom.us",
-                                                  "teams.microsoft.com", "meet.google.com")):
+            virtual = False
+            if location and (
+                location.startswith(("http://", "https://", "zoom.us",
+                                     "teams.microsoft.com", "meet.google.com"))
+                or "teams meeting" in location.lower()
+            ):
                 location = None
+                virtual = True
+            if "zoom" in title_lower:
+                virtual = True
             if not location:
                 for keyword, address in config.KNOWN_LOCATIONS.items():
                     if keyword in title_lower:
@@ -99,6 +107,7 @@ def fetch_today_events(calendar_person_map: dict, day: datetime = None):
                 end=end,
                 location=location,
                 needs_ride=bool(location),
+                virtual=virtual,
                 raw=item,
             ))
     return events
