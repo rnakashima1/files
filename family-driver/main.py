@@ -96,13 +96,15 @@ def build_plan_for_day(day, after=None):
     return legs, questions, all_events
 
 
-def check_replies():
-    """Read replies on the latest plan thread; if they answer open questions,
-    store the answers and reply with an updated plan."""
+def ingest_replies():
+    """Read new replies on the latest plan thread and store any answers
+    (locations / attendees) as overrides. Always runs before a plan is
+    built or sent, so emailed answers are never missed.
+
+    Returns (state, new_answers)."""
     state, replies = gmail_draft.fetch_new_replies()
     if not replies:
-        print("No new replies.")
-        return
+        return state, []
     day_key = state["day"]
     day = datetime.strptime(day_key, "%Y-%m-%d").astimezone()
     g_events, o_events, t_events = gather_events(day)
@@ -117,18 +119,23 @@ def check_replies():
             new_answers.append(f"{title}: {fix}")
             print(f"  Answer from {sender}: {title} -> {fix}")
 
-    if not new_answers:
-        # Nothing parseable — mark replies processed so we don't loop on them.
-        state.setdefault("processed", []).extend(reply_ids)
-        gmail_draft._save_state(state)
-        print("Replies contained no recognizable answers.")
-        return
+    state.setdefault("processed", []).extend(reply_ids)
+    gmail_draft._save_state(state)
+    return state, new_answers
 
+
+def check_replies():
+    """If new replies answer open questions, reply with an updated plan."""
+    state, new_answers = ingest_replies()
+    if not new_answers:
+        print("No new replies with answers.")
+        return
+    day = datetime.strptime(state["day"], "%Y-%m-%d").astimezone()
     now = datetime.now().astimezone()
     after = now if day.date() == now.date() else None
     legs, questions, _ = build_plan_for_day(day, after=after)
     html_body = render_plan_html(legs, [], day, questions=questions)
-    msg_id = gmail_draft.send_reply_on_thread(state, html_body, extra_processed=reply_ids)
+    msg_id = gmail_draft.send_reply_on_thread(state, html_body)
     print(f"Updated plan sent on thread (id={msg_id}).")
 
 
@@ -156,6 +163,12 @@ def main():
         day = datetime.strptime(args.date, "%Y-%m-%d").astimezone()
     else:
         day = now
+
+    # Always pick up any emailed answers before building/sending a new plan.
+    try:
+        ingest_replies()
+    except Exception as exc:
+        print(f"  (could not check email replies — {exc})")
 
     # For today, skip events that have already ended. For any other date, show all.
     after = now if (not args.date and not args.tomorrow) else None

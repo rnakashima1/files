@@ -49,6 +49,9 @@ class Leg:
     # For PICKUP legs: where the car is actually coming FROM (may differ from origin).
     # The driver travels from_location → origin (pickup) → destination (home).
     from_location: Optional[str] = None
+    # True when the rider is a driver going alone — they take the car themselves;
+    # the car stays parked at their event until they drive home.
+    self_drive: bool = False
 
     def __repr__(self):
         d = f"[UBER]" if self.uber else (f"[{self.driver}]" if self.driver else "[UNASSIGNED]")
@@ -59,6 +62,8 @@ class Leg:
 
 
 def _drive_estimate(origin, destination, depart_time):
+    if origin == destination:
+        return 0, 0
     result = get_drive_time_cached(origin, destination, depart_time)
     minutes = result.get("duration_minutes") or FALLBACK_DRIVE_MINUTES
     return minutes, result.get("distance_km")
@@ -163,26 +168,37 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
             # PICKUP: don't depart before the event ends; otherwise leave ASAP
             #         to free the car for the next leg.
             if leg.kind == "DROPOFF":
-                latest_depart = leg.arrive_by - timedelta(minutes=travel_to_origin)
+                # Total trip = car's position -> origin (get rider) -> destination.
+                haul = leg.drive_minutes or FALLBACK_DRIVE_MINUTES
+                latest_depart = (leg.arrive_by
+                                 - timedelta(minutes=config.ARRIVAL_BUFFER_MINUTES)
+                                 - timedelta(minutes=travel_to_origin + haul))
                 leg.depart_by = max(car_free_at, latest_depart)
+                leg.drive_minutes = travel_to_origin + haul
             else:
                 # earliest we can arrive at pickup = car_free_at + travel_to_origin
                 # but we also must not arrive before the event ends
+                # (leg.drive_minutes stays = the ride home from the pickup)
                 earliest_needed = leg.event.end - timedelta(minutes=travel_to_origin)
                 leg.depart_by = max(car_free_at, earliest_needed)
-            leg.drive_minutes = travel_to_origin
 
-        # Try each driver in rotation; skip the rider themselves and anyone busy
-        assigned = None
-        for offset in range(len(drivers)):
-            candidate = drivers[(next_driver_idx + offset) % len(drivers)]
-            if candidate == leg.rider:
-                continue  # can't drive yourself
-            if _driver_busy(candidate, leg, driver_calendars):
-                continue
-            assigned = candidate
-            next_driver_idx = (drivers.index(candidate) + 1) % len(drivers)
-            break
+        # A driver going alone to their own event drives themself — no need
+        # for the other adult to chauffeur. The car stays with them.
+        if leg.rider in drivers:
+            assigned = leg.rider
+            leg.self_drive = True
+        else:
+            # Try each driver in rotation; skip the rider themselves and anyone busy
+            assigned = None
+            for offset in range(len(drivers)):
+                candidate = drivers[(next_driver_idx + offset) % len(drivers)]
+                if candidate == leg.rider:
+                    continue  # can't drive yourself
+                if _driver_busy(candidate, leg, driver_calendars):
+                    continue
+                assigned = candidate
+                next_driver_idx = (drivers.index(candidate) + 1) % len(drivers)
+                break
 
         if assigned is None:
             leg.uber = True
@@ -194,7 +210,10 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
         leg.from_location = car_location
 
         drive_mins = leg.drive_minutes or FALLBACK_DRIVE_MINUTES
-        if leg.kind == "DROPOFF":
+        if leg.self_drive and leg.kind == "DROPOFF":
+            # Car is parked at the driver's event until they head home.
+            car_free_at = leg.event.end
+        elif leg.kind == "DROPOFF":
             # Car arrives at destination and is immediately free.
             car_free_at = leg.depart_by + timedelta(minutes=drive_mins)
         else:
