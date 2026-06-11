@@ -66,10 +66,15 @@ def collect_questions(events):
     kind = "who"    — event whose attendee couldn't be determined (e.g. on the
                       Family calendar with no child named in the title)
     """
+    # Titles that are really to-do reminders, not appointments — no travel.
+    TODO_PREFIXES = ("make ", "call ", "email ", "text ", "buy ", "order ",
+                     "schedule ", "book ", "remind", "pay ", "sign up", "renew ")
     family = set(config.DRIVERS) | set(config.NON_DRIVERS)
     questions = []
     for e in events:
         if e.virtual:
+            continue
+        if e.title.lower().startswith(TODO_PREFIXES):
             continue
         if e.person not in family:
             questions.append((e, "who"))
