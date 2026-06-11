@@ -23,7 +23,7 @@ import argparse
 from datetime import datetime, timedelta
 
 import config
-from sources import google_calendar, outlook_calendar, teamsnap
+from sources import google_calendar, outlook_calendar, teamsnap, event_model
 from sources.event_model import Event
 from planner.timeline import build_timeline, render_timeline, render_plan, render_plan_html
 from planner.driving_plan import build_driving_plan, summarize_conflicts
@@ -78,7 +78,7 @@ def build_plan_for_day(day, after=None):
     Returns (legs, questions, all_events)."""
     day_key = f"{day:%Y-%m-%d}"
     g_events, o_events, t_events = gather_events(day)
-    all_events = g_events + o_events + t_events
+    all_events = event_model.dedupe(g_events + o_events + t_events)
     overrides.apply_overrides(all_events, day_key)
 
     timeline = build_timeline(all_events, after=after)
