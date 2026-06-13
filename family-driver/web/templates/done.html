@@ -1,20 +1,31 @@
 {% extends "base.html" %}
-{% block title %}All set{% endblock %}
+{% block title %}Route locked in{% endblock %}
 {% block content %}
-<h2>✅ Household saved</h2>
-<p>Your settings were written to the local <code>.env</code> file.</p>
-<h3>Next steps</h3>
+<h2>✅ Route locked in</h2>
+<p>Your settings were written to the local <code>.env</code> file. Buckle up.</p>
+
+<div class="cta">
+  <h3>🚦 Take it for a spin</h3>
+  <p class="muted">Look up today's events and drop a ready-to-review driving
+    plan straight into your Gmail drafts.</p>
+  <form method="post" action="{{ url_for('draft_today') }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button type="submit" class="primary">🗺️ Draft today's drive</button>
+  </form>
+  <p class="muted">This reads your calendars and may take up to a minute.</p>
+</div>
+
+<h3>Under the hood</h3>
 <ol class="steps">
-  <li>If you pasted Google credentials, run the one-time authorization in your
-      terminal:<br><code>python main.py --draft-email</code> — a browser window
-      will open for Google sign-in (calendar + email access).</li>
-  <li>Review a draft plan: <code>python main.py --draft-email</code></li>
+  <li>If you pasted new Google credentials, run the one-time authorization in
+      your terminal: <code>python main.py --draft-email</code> — a browser opens
+      for Google sign-in (calendar + email access).</li>
   <li>Send today's plan to everyone: <code>python main.py --send</code></li>
-  <li>The daily 6 a.m. job and the reply-checker keep running as scheduled.</li>
+  <li>The daily 6 a.m. job and the reply-checker keep cruising on schedule.</li>
 </ol>
 <p>
-  <a href="{{ url_for('onboard') }}" class="button">Edit settings</a>
+  <a href="{{ url_for('onboard') }}" class="button">Re-route settings</a>
   &nbsp;
-  <a href="{{ url_for('logout') }}" class="muted">Log out</a>
+  <a href="{{ url_for('logout') }}" class="muted">Pull over &amp; log out</a>
 </p>
 {% endblock %}

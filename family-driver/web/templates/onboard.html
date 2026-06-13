@@ -1,68 +1,83 @@
 {% extends "base.html" %}
-{% block title %}Household setup{% endblock %}
+{% block title %}Map your household{% endblock %}
 {% block content %}
 <div class="topbar">
-  <span class="muted">Signed in as {{ account }}</span>
-  <a href="{{ url_for('logout') }}" class="muted">Log out</a>
+  <span class="muted">Driver's seat: {{ account }}</span>
+  <a href="{{ url_for('logout') }}" class="muted">Pull over &amp; log out</a>
 </div>
 
-<h2>Set up your household</h2>
-<p class="muted">This writes your local <code>.env</code>. You can return and edit it anytime.</p>
+<h2>🗺️ Map your household</h2>
+<p class="muted">This plots your local <code>.env</code> route. Come back and re-route anytime.</p>
 
 <form method="post" action="{{ url_for('onboard') }}">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 
   <fieldset>
-    <legend>Home &amp; cars</legend>
+    <legend>Home base &amp; garage</legend>
     <label>Home address
       <input type="text" name="home_address" value="{{ existing.home_address }}"
              placeholder="123 Main St, Your City, ST 00000" required>
     </label>
-    <label>Number of cars in the household
+    <label>Cars in the garage
       <input type="number" name="num_cars" min="1" max="10"
              value="{{ existing.num_cars or 1 }}" required>
     </label>
   </fieldset>
 
   <fieldset>
-    <legend>Family members</legend>
-    <p class="muted">Mark each person as a <strong>driver/parent</strong> or a
-      <strong>child</strong> (non-driver). The optional calendar ID is the
-      Google Calendar to read for that person (use <code>primary</code> for the
-      account you'll authorize).</p>
+    <legend>Who's riding along?</legend>
+    <p class="muted">Mark each person as a <strong>driver / parent</strong> or a
+      <strong>child</strong> (non-driver). <strong>Email</strong> is the person's
+      Google Calendar address (usually their Gmail) that we read for their events
+      — optional, and you can leave it blank for anyone without one.</p>
+    <div class="row-headers people-grid">
+      <span>Name</span>
+      <span>Role</span>
+      <span>Email <span class="muted">(calendar address)</span></span>
+      <span></span>
+    </div>
     <div id="people">
       {% for p in existing.people %}
-      <div class="person-row">
-        <input type="text" name="person_name" value="{{ p.name }}" placeholder="Name" required>
+      <div class="person-row people-grid">
+        <input type="text" name="person_name" value="{{ p.name }}" placeholder="e.g. Alex" required>
         <select name="person_role">
           <option value="driver" {{ 'selected' if p.role == 'driver' }}>Driver / parent</option>
           <option value="child" {{ 'selected' if p.role == 'child' }}>Child (non-driver)</option>
         </select>
-        <input type="text" name="person_calid" value="{{ p.calid }}" placeholder="Calendar ID (optional)">
+        <input type="text" name="person_calid" value="{{ p.calid }}" placeholder="name@gmail.com">
         <button type="button" class="remove" onclick="this.closest('.person-row').remove()">✕</button>
       </div>
       {% endfor %}
     </div>
-    <button type="button" class="add" onclick="addPerson()">+ Add person</button>
+    <button type="button" class="add" onclick="addPerson()">+ Add a passenger</button>
   </fieldset>
 
   <fieldset>
     <legend>Shared calendars <span class="muted">(optional)</span></legend>
-    <p class="muted">e.g. a Family calendar everyone shares.</p>
+    <p class="muted">Calendars that aren't tied to one person — e.g. a shared
+      <em>Family</em> calendar or a work calendar.
+      {% if existing.extras %}These were imported from your existing setup
+      (your <code>GOOGLE_CALENDAR_MAP</code>); edit or remove any you don't want.{% endif %}</p>
+    <div class="row-headers extra-grid">
+      <span>Label</span>
+      <span>Calendar ID <span class="muted">(or calendar's email address)</span></span>
+      <span></span>
+    </div>
     <div id="extras">
       {% for e in existing.extras %}
-      <div class="extra-row">
-        <input type="text" name="extra_label" value="{{ e.label }}" placeholder="Label (e.g. Family)">
-        <input type="text" name="extra_calid" value="{{ e.calid }}" placeholder="Calendar ID">
+      <div class="extra-row extra-grid">
+        <input type="text" name="extra_label" value="{{ e.label }}" placeholder="e.g. Family">
+        <input type="text" name="extra_calid" value="{{ e.calid }}" placeholder="...@group.calendar.google.com">
         <button type="button" class="remove" onclick="this.closest('.extra-row').remove()">✕</button>
       </div>
       {% endfor %}
     </div>
-    <button type="button" class="add" onclick="addExtra()">+ Add calendar</button>
+    <button type="button" class="add" onclick="addExtra()">+ Add a calendar</button>
   </fieldset>
 
   <fieldset>
-    <legend>Who gets the daily summary?</legend>
+    <legend>Who rides shotgun on the daily summary?</legend>
+    <p class="muted">Email addresses that get the morning driving plan.</p>
     <div id="recipients">
       {% for r in existing.recipients %}
       <div class="recipient-row">
@@ -75,16 +90,14 @@
   </fieldset>
 
   <fieldset>
-    <legend>Calendar &amp; maps credentials</legend>
-    <label>Google Maps API key <span class="muted">(Routes API enabled)</span>
-      <input type="text" name="maps_key" value="{{ existing.maps_key }}" placeholder="AIza...">
-    </label>
-    <label>Google OAuth client JSON <span class="muted">(paste the downloaded file; optional)</span>
+    <legend>Google sign-in <span class="muted">(optional)</span></legend>
+    <label>Google OAuth client JSON <span class="muted">(paste the downloaded file)</span>
       <textarea name="google_credentials" rows="4"
         placeholder='{"installed":{"client_id":"...","client_secret":"..."}}'></textarea>
     </label>
-    <p class="muted">After saving, you'll run a one-time Google sign-in in the
-      terminal to authorize calendar + email access.</p>
+    <p class="muted">Already connected? You can skip this. After saving a new file,
+      you'll do a one-time Google sign-in in the terminal to authorize calendar
+      + email access.</p>
   </fieldset>
 
   <fieldset>
@@ -113,24 +126,24 @@
     </label>
   </fieldset>
 
-  <button type="submit" class="primary">Save household settings</button>
+  <button type="submit" class="primary">🚗 Lock in the route</button>
 </form>
 
 <template id="person-template">
-  <div class="person-row">
-    <input type="text" name="person_name" placeholder="Name" required>
+  <div class="person-row people-grid">
+    <input type="text" name="person_name" placeholder="e.g. Alex" required>
     <select name="person_role">
       <option value="driver">Driver / parent</option>
       <option value="child">Child (non-driver)</option>
     </select>
-    <input type="text" name="person_calid" placeholder="Calendar ID (optional)">
+    <input type="text" name="person_calid" placeholder="name@gmail.com">
     <button type="button" class="remove" onclick="this.closest('.person-row').remove()">✕</button>
   </div>
 </template>
 <template id="extra-template">
-  <div class="extra-row">
-    <input type="text" name="extra_label" placeholder="Label (e.g. Family)">
-    <input type="text" name="extra_calid" placeholder="Calendar ID">
+  <div class="extra-row extra-grid">
+    <input type="text" name="extra_label" placeholder="e.g. Family">
+    <input type="text" name="extra_calid" placeholder="...@group.calendar.google.com">
     <button type="button" class="remove" onclick="this.closest('.extra-row').remove()">✕</button>
   </div>
 </template>

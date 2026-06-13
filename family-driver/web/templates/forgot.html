@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Forgot password{% endblock %}
 {% block content %}
-<h2>Reset your password</h2>
+<h2>🔑 Lost your keys?</h2>
 <p class="muted">Enter your email and we'll send a reset link (valid 1 hour).</p>
 <form method="post" action="{{ url_for('forgot') }}">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">

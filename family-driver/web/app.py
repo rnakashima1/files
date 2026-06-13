@@ -9,12 +9,14 @@ Routes
   /onboard           household setup (people, address, #cars, calendars,
                      recipients) — writes the planner's .env
   /done              confirmation
+  /draft-today       run the planner now and create a Gmail draft of the plan
 
-Run it with web/run.py (or the project README's code word). This app only
-configures the planner; it does not itself fetch calendars or send the daily
-plan.
+Run it with web/run.py (or the project README's code word). This app
+configures the planner and can kick off a one-off plan draft on demand.
 """
 import os
+import subprocess
+import sys
 import secrets
 from functools import wraps
 
@@ -249,7 +251,6 @@ def _save_onboarding():
         "NON_DRIVERS": env_writer.join_list(non_drivers),
         "GOOGLE_CALENDAR_MAP": env_writer.join_pairs(cal_pairs),
         "PLAN_RECIPIENTS": env_writer.join_list(recipients),
-        "GOOGLE_MAPS_API_KEY": f.get("maps_key", "").strip(),
     }
 
     # Optional Outlook owner mapping.
@@ -287,6 +288,27 @@ def _save_onboarding():
 @login_required
 def done():
     return render_template("done.html")
+
+
+@app.route("/draft-today", methods=["POST"])
+@login_required
+def draft_today():
+    """Run the planner now and drop a Gmail draft into the account holder's
+    drafts. Runs main.py in a subprocess so it reads the freshly-saved .env."""
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        proc = subprocess.run(
+            [sys.executable, "main.py", "--draft-email"],
+            cwd=base, capture_output=True, text=True, timeout=180)
+        output = (proc.stdout or "") + (
+            ("\n[errors]\n" + proc.stderr) if proc.returncode and proc.stderr else "")
+        ok = proc.returncode == 0
+    except subprocess.TimeoutExpired:
+        output, ok = "Timed out after 3 minutes while building the plan.", False
+    except Exception as exc:  # noqa: BLE001
+        output, ok = f"Couldn't run the planner: {exc}", False
+    return render_template("plan_result.html", ok=ok, output=output,
+                           recipients=", ".join(config.PLAN_RECIPIENTS))
 
 
 # --------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Verify email{% endblock %}
 {% block content %}
-<h2>Verify your email</h2>
+<h2>🛂 Check your mirrors</h2>
 <p class="muted">Enter the 6-digit code we emailed to <strong>{{ email }}</strong>.</p>
 <form method="post" action="{{ url_for('verify') }}">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">

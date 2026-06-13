@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Log in{% endblock %}
 {% block content %}
-<h2>Log in</h2>
+<h2>🚦 Hit the road</h2>
+<p class="muted">Buckle up and sign in.</p>
 <form method="post" action="{{ url_for('login') }}">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
   <label>Email
@@ -10,11 +11,11 @@
   <label>Password
     <input type="password" name="password" required>
   </label>
-  <button type="submit">Log in</button>
+  <button type="submit">Hit the road</button>
 </form>
 <p class="muted">
-  <a href="{{ url_for('forgot') }}">Forgot password?</a>
+  <a href="{{ url_for('forgot') }}">Lost your keys?</a>
   &nbsp;·&nbsp;
-  New here? <a href="{{ url_for('signup') }}">Create an account</a>
+  New here? <a href="{{ url_for('signup') }}">Get your keys</a>
 </p>
 {% endblock %}

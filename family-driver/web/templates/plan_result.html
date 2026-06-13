@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Today's drive{% endblock %}
+{% block content %}
+{% if ok %}
+<h2>🚗 Plan drafted</h2>
+<p>A driving plan was drafted and saved to your Gmail drafts{% if recipients %}
+  (addressed to {{ recipients }}){% endif %}. Open Gmail to review and send it.</p>
+{% else %}
+<h2>⚠️ Couldn't finish the drive</h2>
+<p>Something stalled while building the plan. Details below.</p>
+{% endif %}
+
+<pre class="plan-output">{{ output }}</pre>
+
+<p>
+  <a href="{{ url_for('done') }}" class="button">Back</a>
+  &nbsp;
+  <a href="{{ url_for('onboard') }}" class="muted">Re-route settings</a>
+</p>
+{% endblock %}
