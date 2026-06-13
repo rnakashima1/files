@@ -27,7 +27,7 @@ from sources import google_calendar, outlook_calendar, teamsnap, event_model
 from sources.event_model import Event
 from planner.timeline import build_timeline, render_timeline, render_plan, render_plan_html
 from planner.driving_plan import build_driving_plan, summarize_conflicts, collect_assumptions
-from planner import overrides
+from planner import overrides, llm_reply
 from email_draft import gmail_draft
 from email_draft.gmail_draft import create_plan_draft, send_plan
 
@@ -117,7 +117,11 @@ def ingest_replies():
     reply_ids = []
     for msg_id, sender, text in replies:
         reply_ids.append(msg_id)
-        for title, fix in overrides.parse_reply_lines(text, all_events):
+        # Prefer the LLM to read free-form prose; fall back to the keyword parser.
+        directives = llm_reply.interpret(text, all_events)
+        if directives is None:
+            directives = overrides.parse_reply_lines(text, all_events)
+        for title, fix in directives:
             overrides.set_override(day_key, title, **fix)
             new_answers.append(f"{title}: {fix}")
             print(f"  Answer from {sender}: {title} -> {fix}")
