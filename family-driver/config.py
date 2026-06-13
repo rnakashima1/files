@@ -14,9 +14,17 @@ GOOGLE_OAUTH_CLIENT_SECRETS_FILE = os.getenv("GOOGLE_OAUTH_CLIENT_SECRETS_FILE",
 GOOGLE_OAUTH_TOKEN_FILE = os.getenv("GOOGLE_OAUTH_TOKEN_FILE", "token.json")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
-# Anthropic API key — enables LLM interpretation of free-form email replies
-# (planner/llm_reply.py). Optional; without it, replies use the keyword parser.
+# Anthropic / Claude — a single SERVICE credential interprets all free-form
+# email replies (planner/llm_reply.py). End users are never asked for a key.
+# Provide ONE of: ANTHROPIC_API_KEY (Console pay-as-you-go key) or
+# ANTHROPIC_AUTH_TOKEN (OAuth token from a Claude Pro/Max subscription); or set
+# ANTHROPIC_USE_LOGIN=1 to use an `ant auth login` profile on this host.
+# Without any, replies fall back to the keyword parser.
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_AUTH_TOKEN = os.getenv("ANTHROPIC_AUTH_TOKEN", "")
+# Model for the (small, cheap) reply-interpretation step. Default Opus; set to
+# claude-haiku-4-5 or claude-sonnet-4-6 to cut cost.
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8")
 
 MS_CLIENT_ID = os.getenv("MS_CLIENT_ID", "")
 MS_TENANT_ID = os.getenv("MS_TENANT_ID", "common")
