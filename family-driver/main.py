@@ -24,7 +24,7 @@ import config
 from sources import google_calendar, outlook_calendar, teamsnap, event_model
 from sources.event_model import Event
 from planner.timeline import build_timeline, render_timeline, render_plan, render_plan_html
-from planner.driving_plan import build_driving_plan, summarize_conflicts
+from planner.driving_plan import build_driving_plan, summarize_conflicts, collect_assumptions
 from planner import overrides
 from email_draft import gmail_draft
 from email_draft.gmail_draft import create_plan_draft, send_plan
@@ -75,7 +75,7 @@ def split_kid_and_driver_events(all_events):
 def build_plan_for_day(day, after=None):
     """Fetch events, apply reply-overrides, and build the plan.
 
-    Returns (legs, questions, all_events)."""
+    Returns (legs, questions, assumptions, all_events)."""
     day_key = f"{day:%Y-%m-%d}"
     g_events, o_events, t_events = gather_events(day)
     all_events = event_model.dedupe(g_events + o_events + t_events)
@@ -93,7 +93,8 @@ def build_plan_for_day(day, after=None):
     # Events we couldn't plan for — missing location or unknown attendee.
     upcoming = [e for e in all_events if after is None or e.end > after]
     questions = overrides.collect_questions(upcoming)
-    return legs, questions, all_events
+    assumptions = collect_assumptions(legs)
+    return legs, questions, assumptions, all_events
 
 
 def ingest_replies():
@@ -133,8 +134,8 @@ def check_replies():
     day = datetime.strptime(state["day"], "%Y-%m-%d").astimezone()
     now = datetime.now().astimezone()
     after = now if day.date() == now.date() else None
-    legs, questions, _ = build_plan_for_day(day, after=after)
-    html_body = render_plan_html(legs, [], day, questions=questions)
+    legs, questions, assumptions, _ = build_plan_for_day(day, after=after)
+    html_body = render_plan_html(legs, [], day, questions=questions, assumptions=assumptions)
     msg_id = gmail_draft.send_reply_on_thread(state, html_body)
     print(f"Updated plan sent on thread (id={msg_id}).")
 
@@ -174,9 +175,9 @@ def main():
 
     # For today, skip events that have already ended. For any other date, show all.
     after = now if (not args.date and not args.tomorrow) else None
-    legs, questions, _ = build_plan_for_day(day, after=after)
+    legs, questions, assumptions, _ = build_plan_for_day(day, after=after)
 
-    plan_text = render_plan(legs, [], day)
+    plan_text = render_plan(legs, [], day, assumptions=assumptions)
     print(plan_text)
     if questions:
         print("\nOPEN QUESTIONS")
@@ -185,7 +186,7 @@ def main():
 
     subject = f"Driving plan for {day:%a %b %-d}"
     if args.send or args.draft_email or args.html_out:
-        html_body = render_plan_html(legs, [], day, questions=questions)
+        html_body = render_plan_html(legs, [], day, questions=questions, assumptions=assumptions)
         if args.html_out:
             with open(args.html_out, "w") as f:
                 f.write(html_body)
