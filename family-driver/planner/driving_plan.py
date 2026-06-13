@@ -31,6 +31,11 @@ FALLBACK_DRIVE_MINUTES = 20
 # location to the pickup location rather than swinging home first.
 HOME_RETURN_THRESHOLD_MINUTES = 15
 
+# If the gap before a rider's next event exceeds this, they go home in between
+# rather than waiting at the venue for hours; shorter gaps route directly to the
+# next stop.
+RIDER_DIRECT_GAP_MINUTES = 45
+
 
 @dataclass
 class Leg:
@@ -107,7 +112,12 @@ def _build_legs(events: List[Event]) -> List[Leg]:
 
             next_location = config.HOME_ADDRESS or "Home"
             if i + 1 < len(rider_events):
-                next_location = rider_events[i + 1].location
+                nxt = rider_events[i + 1]
+                gap_min = (nxt.start - e.end).total_seconds() / 60.0
+                # Only head straight to the next event if it's soon; otherwise
+                # the rider goes home in between rather than loitering.
+                if gap_min <= RIDER_DIRECT_GAP_MINUTES:
+                    next_location = nxt.location
 
             pickup_minutes, pickup_km, est_pick = _drive_estimate(e.location, next_location, e.end)
             # Driver must leave home in time to ARRIVE at the pickup location by e.end.
@@ -200,9 +210,13 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
                 earliest_needed = leg.event.end - timedelta(minutes=travel_to_origin)
                 leg.depart_by = max(car_free_at, earliest_needed)
 
+        # An explicit per-event driver override (e.g. from an email reply) wins.
+        forced = getattr(leg.event, "forced_driver", None)
+        if forced and forced != leg.rider:
+            assigned = forced
         # A driver going alone to their own event drives themself — no need
         # for the other adult to chauffeur. The car stays with them.
-        if leg.rider in drivers:
+        elif leg.rider in drivers:
             assigned = leg.rider
             leg.self_drive = True
         else:

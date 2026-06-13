@@ -16,6 +16,8 @@ class Event:
     location: Optional[str] = None
     needs_ride: bool = True  # False for e.g. all-day reminders with no location
     virtual: bool = False    # Zoom/Teams/Meet — no driving, no location question
+    skip: bool = False       # override: rider has another ride — exclude from plan
+    forced_driver: Optional[str] = None  # override: this driver must handle it
     raw: dict = field(default_factory=dict)
 
     def overlaps(self, other: "Event") -> bool:

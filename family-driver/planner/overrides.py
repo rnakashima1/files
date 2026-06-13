@@ -32,29 +32,45 @@ def get_for_day(day_key: str) -> dict:
     return _load().get(day_key, {})
 
 
-def set_override(day_key: str, title: str, *, location: str = None, person: str = None):
+def set_override(day_key: str, title: str, **fields):
+    """Store override fields for an event on a given day. Recognized fields:
+    location, person, driver (force this driver), skip (rider has another ride),
+    start, end ('HH:MM', retime the event)."""
     data = _load()
     entry = data.setdefault(day_key, {}).setdefault(title.lower().strip(), {})
-    if location:
-        entry["location"] = location
-    if person:
-        entry["person"] = person
+    for k, v in fields.items():
+        if v is not None:
+            entry[k] = v
     _save(data)
 
 
+def _retime(dt, hhmm):
+    """Return dt with its time replaced by 'HH:MM' (keeps date + tzinfo)."""
+    h, m = (int(x) for x in hhmm.split(":"))
+    return dt.replace(hour=h, minute=m, second=0, microsecond=0)
+
+
 def apply_overrides(events, day_key: str):
-    """Mutate events in place with any stored answers for this day."""
+    """Mutate events in place with any stored answers/directives for this day."""
     day_overrides = get_for_day(day_key)
     if not day_overrides:
         return events
     for e in events:
         for title_key, fix in day_overrides.items():
             if title_key in e.title.lower():
+                if fix.get("skip"):
+                    e.skip = True
                 if fix.get("location"):
                     e.location = fix["location"]
                     e.needs_ride = True
                 if fix.get("person"):
                     e.person = fix["person"]
+                if fix.get("driver"):
+                    e.forced_driver = fix["driver"]
+                if fix.get("start"):
+                    e.start = _retime(e.start, fix["start"])
+                if fix.get("end"):
+                    e.end = _retime(e.end, fix["end"])
                 break
     return events
 
