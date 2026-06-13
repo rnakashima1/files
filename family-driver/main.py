@@ -80,6 +80,8 @@ def build_plan_for_day(day, after=None):
     g_events, o_events, t_events = gather_events(day)
     all_events = event_model.dedupe(g_events + o_events + t_events)
     overrides.apply_overrides(all_events, day_key)
+    # Drop events the rider has another ride for (skip override).
+    all_events = [e for e in all_events if not e.skip]
 
     timeline = build_timeline(all_events, after=after)
     print("\n" + render_timeline(timeline) + "\n")
