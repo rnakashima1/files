@@ -1,5 +1,6 @@
-"""Fetch today's games/practices for the "Sanjo's Fury" team from the
-TeamSnap API v3 (https://www.teamsnap.com/documentation/apiv3).
+"""Fetch today's games/practices for a child's configured TeamSnap team
+(config.TEAMSNAP_TEAM_NAME) from the TeamSnap API v3
+(https://www.teamsnap.com/documentation/apiv3).
 
 Auth: OAuth2 access token (create an app at https://auth.teamsnap.com,
 or generate a personal token). TeamSnap's API uses a Collection+JSON / HAL-ish
@@ -46,9 +47,10 @@ def _find_team_id(team_name: str) -> str:
     raise RuntimeError(f"TeamSnap team '{team_name}' not found")
 
 
-def fetch_today_events(person="Sanjo", day: datetime = None):
-    """Returns games + practices for today as a list of Event, attributed to `person`
-    (the player on the team — defaults to Sanjo per the household roster)."""
+def fetch_today_events(person=None, day: datetime = None):
+    """Returns games + practices for today as a list of Event, attributed to
+    `person` (the child on the team; defaults to config.TEAMSNAP_PERSON)."""
+    person = person or config.TEAMSNAP_PERSON
     day = day or datetime.now().astimezone()
     start_of_day = datetime.combine(day.date(), time.min, tzinfo=day.tzinfo)
     end_of_day = start_of_day + timedelta(days=1)

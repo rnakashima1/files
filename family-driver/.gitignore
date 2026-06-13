@@ -6,3 +6,9 @@ credentials.json
 msal_token_cache.bin
 .venv/
 output/
+
+# Auth + onboarding local state (contains password hashes / PII — never commit)
+auth_store.json
+plan_state.json
+overrides.json
+web/data/

@@ -12,6 +12,19 @@ from planner.driving_plan import Leg
 
 LOCAL_TZ = ZoneInfo("America/Los_Angeles")
 
+# Colours assigned to each driver's name in the email, in roster order, when
+# no explicit colour is set in config.DRIVER_COLORS.
+DRIVER_PALETTE = ["#1a73e8", "#c0392b", "#27ae60", "#8e44ad", "#e67e22", "#16a085"]
+
+
+def driver_colors() -> dict:
+    """Map each driver to a display colour. An explicit config.DRIVER_COLORS
+    entry wins; otherwise a palette colour is assigned in roster order."""
+    colors = {}
+    for i, d in enumerate(config.DRIVERS):
+        colors[d] = config.DRIVER_COLORS.get(d, DRIVER_PALETTE[i % len(DRIVER_PALETTE)])
+    return colors
+
 
 def _local(dt: datetime) -> datetime:
     """Convert a datetime to Pacific time."""
@@ -73,11 +86,13 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
                 f'<div style="margin:4px 0">📅 <strong>{ev.title}</strong>'
                 f' ({_fmt(s)}, {ev.person}) — {ask}</div>'
             )
+        example_title = questions[0][0].title if questions else "Event name"
+        who_name = config.NON_DRIVERS[0] if config.NON_DRIVERS else "child's name"
         rows.append(
             '<p style="font-family:sans-serif;font-size:12px;color:#888;margin:6px 0 0">'
             'Reply to this email with one line per answer, like<br>'
-            '<code>Komaki lunch: 1234 Lincoln Ave, San Jose</code> &nbsp;(location)<br>'
-            '<code>Playdate: Lara</code> &nbsp;(attendee)<br>'
+            f'<code>{example_title}: 123 Main St, Your City</code> &nbsp;(location)<br>'
+            f'<code>{example_title}: {who_name}</code> &nbsp;(attendee)<br>'
             'Replies are checked every 30 minutes and an updated plan is sent back '
             'on this thread.</p>'
         )
@@ -105,15 +120,16 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
         return (f'<span style="background:{color};border-radius:4px;'
                 f'padding:1px 3px;font-size:13px">🚗</span>')
 
+    DRIVER_COLORS = driver_colors()
+    driver_legend = " &nbsp;&nbsp; ".join(
+        f'<span style="color:{c}">■ {d}</span>' for d, c in DRIVER_COLORS.items()
+    )
     rows.append(
         '<p style="font-family:sans-serif;font-size:13px;color:#888;margin:0 0 12px">'
         f'{_car("#1a73e8")} = drop-off &nbsp;&nbsp; '
         f'{_car("#c0392b")} = pick-up &nbsp;&nbsp; ⚠️ = needs Uber<br>'
-        '<span style="color:#1a73e8">■ Ryan</span> &nbsp;&nbsp; '
-        '<span style="color:#c0392b">■ Komaki</span></p>'
+        + driver_legend + '</p>'
     )
-
-    DRIVER_COLORS = {"Ryan": "#1a73e8", "Komaki": "#c0392b"}
 
     for leg in legs:
         driver = leg.driver or "UNASSIGNED"

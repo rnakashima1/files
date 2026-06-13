@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}All set{% endblock %}
+{% block content %}
+<h2>✅ Household saved</h2>
+<p>Your settings were written to the local <code>.env</code> file.</p>
+<h3>Next steps</h3>
+<ol class="steps">
+  <li>If you pasted Google credentials, run the one-time authorization in your
+      terminal:<br><code>python main.py --draft-email</code> — a browser window
+      will open for Google sign-in (calendar + email access).</li>
+  <li>Review a draft plan: <code>python main.py --draft-email</code></li>
+  <li>Send today's plan to everyone: <code>python main.py --send</code></li>
+  <li>The daily 6 a.m. job and the reply-checker keep running as scheduled.</li>
+</ol>
+<p>
+  <a href="{{ url_for('onboard') }}" class="button">Edit settings</a>
+  &nbsp;
+  <a href="{{ url_for('logout') }}" class="muted">Log out</a>
+</p>
+{% endblock %}

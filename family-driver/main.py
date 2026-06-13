@@ -3,21 +3,19 @@
 
 Run:  python main.py [--draft-email] [--date YYYY-MM-DD]
 
-Pulls today's events from Google Calendar, Outlook, and TeamSnap (Sanjo's
-Fury), lines them up by time + location, builds a one-car pickup/dropoff
-driving plan for Komaki and Ryan, estimates drive times with the Google Maps
-Routes API (traffic-aware), prints the plan, and — if --draft-email is passed
-— creates a Gmail draft of the plan addressed to Komaki for review & sending.
+Pulls today's events from Google Calendar, Outlook, and a child's TeamSnap
+team, lines them up by time + location, builds a one-car pickup/dropoff driving
+plan for the household's drivers, estimates drive times with the Google Maps
+Routes API (traffic-aware), prints the plan, and — if --draft-email is passed —
+creates a Gmail draft of the plan for review & sending.
 
-CONFIGURE FIRST: copy .env.example to .env and fill in:
+CONFIGURE FIRST: run the onboarding web app (see web/README or the project
+README) to create your .env, or copy .env.example to .env and fill in:
   - Google OAuth client (credentials.json) for Calendar + Gmail
   - Google Maps API key with the Routes API enabled
   - Microsoft Graph app registration (for Outlook)
   - TeamSnap OAuth access token
-  - Household addresses / names
-
-Then map each family member to their calendar IDs below in CALENDAR_MAP /
-OUTLOOK_MAP — these are placeholders you should edit for your household.
+  - Household roster, addresses, calendar IDs, and summary recipients
 """
 import argparse
 from datetime import datetime, timedelta
@@ -34,11 +32,7 @@ from email_draft.gmail_draft import create_plan_draft, send_plan
 # Calendar maps are loaded from .env (GOOGLE_CALENDAR_MAP, OUTLOOK_CALENDAR_MAP).
 # See .env.example for the format.
 GOOGLE_CALENDAR_MAP = config.GOOGLE_CALENDAR_MAP
-
-# Outlook / Microsoft 365: same idea, via Microsoft Graph.
-OUTLOOK_CALENDAR_MAP = {
-    "me": "Komaki",
-}
+OUTLOOK_CALENDAR_MAP = config.OUTLOOK_CALENDAR_MAP
 
 
 def gather_events(day):
@@ -52,11 +46,15 @@ def gather_events(day):
         print(f"  (skipping Outlook — {exc})")
         o_events = []
 
-    print(f"Fetching TeamSnap ({config.TEAMSNAP_TEAM_NAME}) events for Sanjo...")
-    try:
-        t_events = teamsnap.fetch_today_events(person="Sanjo", day=day)
-    except Exception as exc:
-        print(f"  (skipping TeamSnap — {exc})")
+    if config.TEAMSNAP_TEAM_NAME and config.TEAMSNAP_PERSON:
+        print(f"Fetching TeamSnap ({config.TEAMSNAP_TEAM_NAME}) events "
+              f"for {config.TEAMSNAP_PERSON}...")
+        try:
+            t_events = teamsnap.fetch_today_events(person=config.TEAMSNAP_PERSON, day=day)
+        except Exception as exc:
+            print(f"  (skipping TeamSnap — {exc})")
+            t_events = []
+    else:
         t_events = []
 
     return g_events, o_events, t_events
@@ -146,7 +144,7 @@ def main():
     parser.add_argument("--draft-email", action="store_true",
                         help="Create a Gmail draft of the plan")
     parser.add_argument("--send", action="store_true",
-                        help="Send the plan email to all recipients (Komaki + Ryan)")
+                        help="Send the plan email to all configured recipients")
     parser.add_argument("--check-replies", action="store_true",
                         help="Check the latest plan email for replies answering "
                              "open questions; send an updated plan if so")

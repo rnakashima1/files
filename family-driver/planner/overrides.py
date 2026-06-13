@@ -1,11 +1,11 @@
 """Per-day event overrides learned from email replies.
 
-When the plan email asks "where is Komaki lunch?" and someone replies
-"Komaki lunch: 1234 Lincoln Ave, San Jose", the answer is stored here and
-applied on the next plan build for that date.
+When the plan email asks "where is the team lunch?" and someone replies
+"Team lunch: 1234 Main St, Your City", the answer is stored here and applied on
+the next plan build for that date.
 
 Storage: overrides.json in the project root:
-  { "2026-06-10": { "komaki lunch": {"location": "...", "person": "..."} } }
+  { "2026-06-10": { "team lunch": {"location": "...", "person": "..."} } }
 """
 import json
 import os
@@ -86,8 +86,8 @@ def collect_questions(events):
 def parse_reply_lines(text: str, events) -> list:
     """Parse a reply body into (event_title, field, value) answers.
 
-    Lines look like 'Komaki lunch: 1234 Lincoln Ave' (location) or
-    'Playdate: Lara' (attendee, when the value is a family member's name).
+    Lines look like 'Team lunch: 1234 Main St' (location) or
+    'Playdate: <child name>' (attendee, when the value is a family member's name).
     Returns list of (title, {"location": ...} or {"person": ...}).
     """
     family = {n.lower(): n for n in (list(config.DRIVERS) + list(config.NON_DRIVERS))}

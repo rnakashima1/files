@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Forgot password{% endblock %}
+{% block content %}
+<h2>Reset your password</h2>
+<p class="muted">Enter your email and we'll send a reset link (valid 1 hour).</p>
+<form method="post" action="{{ url_for('forgot') }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>Email
+    <input type="email" name="email" required autofocus>
+  </label>
+  <button type="submit">Send reset link</button>
+</form>
+<p class="muted"><a href="{{ url_for('login') }}">Back to log in</a></p>
+{% endblock %}

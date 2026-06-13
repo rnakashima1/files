@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+{% block content %}
+<h2>Create your account</h2>
+<p class="muted">You'll verify your email next, then set up your household.</p>
+<form method="post" action="{{ url_for('signup') }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>Email
+    <input type="email" name="email" value="{{ email }}" required autofocus>
+  </label>
+  <label>Password <span class="muted">(at least 8 characters)</span>
+    <input type="password" name="password" minlength="8" required>
+  </label>
+  <label>Confirm password
+    <input type="password" name="confirm" minlength="8" required>
+  </label>
+  <button type="submit">Create account</button>
+</form>
+<p class="muted">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+{% endblock %}

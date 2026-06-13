@@ -37,7 +37,7 @@ def _get_token():
 
 
 def fetch_today_events(calendar_person_map: dict, day: datetime = None):
-    """calendar_person_map: {"me": "Ryan"} or {calendar_id: person_name, ...}
+    """calendar_person_map: {"me": "Parent1"} or {calendar_id: person_name, ...}
 
     Uses /me/calendarView for the "me" entry; for shared/other calendars you'd
     extend this to /users/{id}/calendarView with appropriate permissions.

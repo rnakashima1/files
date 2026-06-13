@@ -2,8 +2,8 @@
 
 Model
 -----
-Every location-based event — whether for a kid (Oto, Lara, Sanjo) or a driver
-(Komaki, Ryan) — generates two legs:
+Every location-based event — whether for a child (non-driver) or a parent
+(driver) — generates two legs:
   - DROPOFF: drive the person from their current location to the event,
     arriving ARRIVAL_BUFFER_MINUTES early
   - PICKUP: drive them home (or to their next event) after it ends
@@ -128,7 +128,7 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
     - Legs that can't be covered are marked uber=True.
     """
     driver_calendars = driver_calendars or {}
-    drivers = list(config.DRIVERS) if config.DRIVERS else ["Komaki", "Ryan"]
+    drivers = list(config.DRIVERS)
 
     # Build legs for kids AND drivers who have location-based events
     driver_location_events = [

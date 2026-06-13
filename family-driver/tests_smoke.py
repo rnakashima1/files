@@ -12,15 +12,15 @@ TZ = timezone(timedelta(hours=-7))
 D = lambda h, m=0: datetime(2026, 6, 8, h, m, tzinfo=TZ)
 
 config.HOME_ADDRESS = "1 Family Way, Hometown"
-config.DRIVERS = ["Komaki", "Ryan"]
-config.NON_DRIVERS = ["Oto", "Lara", "Sanjo"]
+config.DRIVERS = ["Parent1", "Parent2"]
+config.NON_DRIVERS = ["Child1", "Child2", "Child3"]
 
 events = [
-    Event("teamsnap", "Sanjo", "Sanjo's Fury: Game vs Hawks", D(9), D(11), "Riverside Park Field 3"),
-    Event("google_calendar", "Lara", "Piano lesson", D(10), D(11), "Bright Notes Studio"),
-    Event("google_calendar", "Oto", "Robotics club", D(15, 30), D(17), "Lincoln Middle School"),
-    Event("outlook", "Komaki", "Client meeting", D(9, 30), D(12), "Downtown Office Tower"),
-    Event("google_calendar", "Ryan", "Standup", D(9), D(9, 15), "Home Office"),
+    Event("teamsnap", "Child3", "Soccer: Game vs Hawks", D(9), D(11), "Riverside Park Field 3"),
+    Event("google_calendar", "Child2", "Piano lesson", D(10), D(11), "Bright Notes Studio"),
+    Event("google_calendar", "Child1", "Robotics club", D(15, 30), D(17), "Lincoln Middle School"),
+    Event("outlook", "Parent1", "Client meeting", D(9, 30), D(12), "Downtown Office Tower"),
+    Event("google_calendar", "Parent2", "Standup", D(9), D(9, 15), "Home Office"),
 ]
 
 

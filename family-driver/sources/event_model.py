@@ -9,7 +9,7 @@ class Event:
     """A single normalized calendar/event entry."""
 
     source: str            # "google_calendar" | "outlook" | "teamsnap"
-    person: str            # Whose event this is, e.g. "Oto", "Lara", "Sanjo", "Family"
+    person: str            # Whose event this is — a driver, a child, or "Family"
     title: str
     start: datetime        # timezone-aware
     end: datetime          # timezone-aware

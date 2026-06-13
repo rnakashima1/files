@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Household setup{% endblock %}
+{% block content %}
+<div class="topbar">
+  <span class="muted">Signed in as {{ account }}</span>
+  <a href="{{ url_for('logout') }}" class="muted">Log out</a>
+</div>
+
+<h2>Set up your household</h2>
+<p class="muted">This writes your local <code>.env</code>. You can return and edit it anytime.</p>
+
+<form method="post" action="{{ url_for('onboard') }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+  <fieldset>
+    <legend>Home &amp; cars</legend>
+    <label>Home address
+      <input type="text" name="home_address" value="{{ existing.home_address }}"
+             placeholder="123 Main St, Your City, ST 00000" required>
+    </label>
+    <label>Number of cars in the household
+      <input type="number" name="num_cars" min="1" max="10"
+             value="{{ existing.num_cars or 1 }}" required>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Family members</legend>
+    <p class="muted">Mark each person as a <strong>driver/parent</strong> or a
+      <strong>child</strong> (non-driver). The optional calendar ID is the
+      Google Calendar to read for that person (use <code>primary</code> for the
+      account you'll authorize).</p>
+    <div id="people">
+      {% for p in existing.people %}
+      <div class="person-row">
+        <input type="text" name="person_name" value="{{ p.name }}" placeholder="Name" required>
+        <select name="person_role">
+          <option value="driver" {{ 'selected' if p.role == 'driver' }}>Driver / parent</option>
+          <option value="child" {{ 'selected' if p.role == 'child' }}>Child (non-driver)</option>
+        </select>
+        <input type="text" name="person_calid" value="{{ p.calid }}" placeholder="Calendar ID (optional)">
+        <button type="button" class="remove" onclick="this.closest('.person-row').remove()">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="add" onclick="addPerson()">+ Add person</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Shared calendars <span class="muted">(optional)</span></legend>
+    <p class="muted">e.g. a Family calendar everyone shares.</p>
+    <div id="extras">
+      {% for e in existing.extras %}
+      <div class="extra-row">
+        <input type="text" name="extra_label" value="{{ e.label }}" placeholder="Label (e.g. Family)">
+        <input type="text" name="extra_calid" value="{{ e.calid }}" placeholder="Calendar ID">
+        <button type="button" class="remove" onclick="this.closest('.extra-row').remove()">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="add" onclick="addExtra()">+ Add calendar</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Who gets the daily summary?</legend>
+    <div id="recipients">
+      {% for r in existing.recipients %}
+      <div class="recipient-row">
+        <input type="email" name="recipient" value="{{ r }}" placeholder="email@example.com">
+        <button type="button" class="remove" onclick="this.closest('.recipient-row').remove()">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="add" onclick="addRecipient()">+ Add recipient</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Calendar &amp; maps credentials</legend>
+    <label>Google Maps API key <span class="muted">(Routes API enabled)</span>
+      <input type="text" name="maps_key" value="{{ existing.maps_key }}" placeholder="AIza...">
+    </label>
+    <label>Google OAuth client JSON <span class="muted">(paste the downloaded file; optional)</span>
+      <textarea name="google_credentials" rows="4"
+        placeholder='{"installed":{"client_id":"...","client_secret":"..."}}'></textarea>
+    </label>
+    <p class="muted">After saving, you'll run a one-time Google sign-in in the
+      terminal to authorize calendar + email access.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Outlook / Microsoft 365 <span class="muted">(optional)</span></legend>
+    <label>Outlook calendar owner <span class="muted">(a driver's name; leave blank to skip)</span>
+      <input type="text" name="outlook_owner" value="{{ existing.outlook_owner }}">
+    </label>
+    <label>Microsoft client ID
+      <input type="text" name="ms_client_id" value="{{ existing.ms_client_id }}">
+    </label>
+    <label>Microsoft tenant ID
+      <input type="text" name="ms_tenant_id" value="{{ existing.ms_tenant_id or 'common' }}">
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>TeamSnap <span class="muted">(optional — for a child's sports team)</span></legend>
+    <label>TeamSnap access token
+      <input type="text" name="teamsnap_token" placeholder="leave blank to skip">
+    </label>
+    <label>Team name
+      <input type="text" name="teamsnap_team" value="{{ existing.teamsnap_team }}">
+    </label>
+    <label>Which child is on the team?
+      <input type="text" name="teamsnap_person" value="{{ existing.teamsnap_person }}">
+    </label>
+  </fieldset>
+
+  <button type="submit" class="primary">Save household settings</button>
+</form>
+
+<template id="person-template">
+  <div class="person-row">
+    <input type="text" name="person_name" placeholder="Name" required>
+    <select name="person_role">
+      <option value="driver">Driver / parent</option>
+      <option value="child">Child (non-driver)</option>
+    </select>
+    <input type="text" name="person_calid" placeholder="Calendar ID (optional)">
+    <button type="button" class="remove" onclick="this.closest('.person-row').remove()">✕</button>
+  </div>
+</template>
+<template id="extra-template">
+  <div class="extra-row">
+    <input type="text" name="extra_label" placeholder="Label (e.g. Family)">
+    <input type="text" name="extra_calid" placeholder="Calendar ID">
+    <button type="button" class="remove" onclick="this.closest('.extra-row').remove()">✕</button>
+  </div>
+</template>
+<template id="recipient-template">
+  <div class="recipient-row">
+    <input type="email" name="recipient" placeholder="email@example.com">
+    <button type="button" class="remove" onclick="this.closest('.recipient-row').remove()">✕</button>
+  </div>
+</template>
+
+<script>
+  function cloneInto(id, containerId) {
+    const tpl = document.getElementById(id);
+    document.getElementById(containerId).appendChild(tpl.content.cloneNode(true));
+  }
+  function addPerson()    { cloneInto('person-template', 'people'); }
+  function addExtra()     { cloneInto('extra-template', 'extras'); }
+  function addRecipient() { cloneInto('recipient-template', 'recipients'); }
+  // Ensure there's always at least one empty row to start with.
+  window.addEventListener('DOMContentLoaded', function () {
+    if (!document.querySelector('#people .person-row')) addPerson();
+    if (!document.querySelector('#recipients .recipient-row')) addRecipient();
+  });
+</script>
+{% endblock %}
