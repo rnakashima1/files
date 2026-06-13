@@ -46,16 +46,18 @@ def gather_events(day):
         print(f"  (skipping Outlook — {exc})")
         o_events = []
 
-    if config.TEAMSNAP_TEAM_NAME and config.TEAMSNAP_PERSON:
-        print(f"Fetching TeamSnap ({config.TEAMSNAP_TEAM_NAME}) events "
-              f"for {config.TEAMSNAP_PERSON}...")
-        try:
-            t_events = teamsnap.fetch_today_events(person=config.TEAMSNAP_PERSON, day=day)
-        except Exception as exc:
-            print(f"  (skipping TeamSnap — {exc})")
-            t_events = []
-    else:
-        t_events = []
+    t_events = []
+    if config.TEAMSNAP_TEAM_NAME and config.TEAMSNAP_ACCESS_TOKEN:
+        if not config.TEAMSNAP_PERSON:
+            print("  (skipping TeamSnap — TEAMSNAP_PERSON is not set; set it to "
+                  "the child on the team so their games/practices get rides)")
+        else:
+            print(f"Fetching TeamSnap ({config.TEAMSNAP_TEAM_NAME}) events "
+                  f"for {config.TEAMSNAP_PERSON}...")
+            try:
+                t_events = teamsnap.fetch_today_events(person=config.TEAMSNAP_PERSON, day=day)
+            except Exception as exc:
+                print(f"  (skipping TeamSnap — {exc})")
 
     return g_events, o_events, t_events
 
