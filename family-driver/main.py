@@ -148,6 +148,8 @@ def main():
     parser.add_argument("--check-replies", action="store_true",
                         help="Check the latest plan email for replies answering "
                              "open questions; send an updated plan if so")
+    parser.add_argument("--html-out",
+                        help="Also write the rendered HTML email body to this file")
     args = parser.parse_args()
 
     if args.check_replies:
@@ -180,14 +182,17 @@ def main():
             print(f"  {ev.title} — {'who is going?' if kind == 'who' else 'where is it?'}")
 
     subject = f"Driving plan for {day:%a %b %-d}"
-    if args.send:
+    if args.send or args.draft_email or args.html_out:
         html_body = render_plan_html(legs, [], day, questions=questions)
-        msg_id = send_plan(subject, html_body, day_key=f"{day:%Y-%m-%d}")
-        print(f"\nEmail sent (id={msg_id}) to: {', '.join(config.PLAN_RECIPIENTS)}")
-    elif args.draft_email:
-        html_body = render_plan_html(legs, [], day, questions=questions)
-        draft_id = create_plan_draft(subject, html_body)
-        print(f"\nGmail draft created (id={draft_id}). Review and send it from Gmail.")
+        if args.html_out:
+            with open(args.html_out, "w") as f:
+                f.write(html_body)
+        if args.send:
+            msg_id = send_plan(subject, html_body, day_key=f"{day:%Y-%m-%d}")
+            print(f"\nEmail sent (id={msg_id}) to: {', '.join(config.PLAN_RECIPIENTS)}")
+        elif args.draft_email:
+            draft_id = create_plan_draft(subject, html_body)
+            print(f"\nGmail draft created (id={draft_id}). Review and send it from Gmail.")
 
 
 if __name__ == "__main__":

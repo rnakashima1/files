@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Today's drive{% endblock %}
+{% block title %}{{ date }} drive{% endblock %}
 {% block content %}
 {% if ok %}
-<h2>🚗 Plan drafted</h2>
-<p>A driving plan was drafted and saved to your Gmail drafts{% if recipients %}
-  (addressed to {{ recipients }}){% endif %}. Open Gmail to review and send it.</p>
+<h2>🚗 Draft ready — {{ date }}</h2>
+<p>Saved to your Gmail drafts{% if recipients %} (addressed to {{ recipients }}){% endif %}.
+  Here's exactly what the email looks like:</p>
+<iframe class="email-preview" sandbox srcdoc="{{ email_html }}"></iframe>
 {% else %}
-<h2>⚠️ Couldn't finish the drive</h2>
-<p>Something stalled while building the plan. Details below.</p>
+<h2>⚠️ Couldn't build the drive</h2>
+<p>Something stalled while building the plan for {{ date }}.</p>
+{% if error %}<p class="muted">{{ error }}</p>{% endif %}
 {% endif %}
 
-<pre class="plan-output">{{ output }}</pre>
-
 <p>
-  <a href="{{ url_for('done') }}" class="button">Back</a>
+  <a href="{{ url_for('done') }}" class="button">Pick another day</a>
   &nbsp;
   <a href="{{ url_for('onboard') }}" class="muted">Re-route settings</a>
 </p>

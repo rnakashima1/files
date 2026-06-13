@@ -18,7 +18,10 @@ import os
 import subprocess
 import sys
 import secrets
+import tempfile
+from datetime import datetime
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 from flask import (Flask, flash, redirect, render_template, request,
                    session, url_for)
@@ -287,28 +290,56 @@ def _save_onboarding():
 @app.route("/done")
 @login_required
 def done():
-    return render_template("done.html")
+    return render_template("done.html", today=_pacific_today())
 
 
 @app.route("/draft-today", methods=["POST"])
 @login_required
 def draft_today():
-    """Run the planner now and drop a Gmail draft into the account holder's
-    drafts. Runs main.py in a subprocess so it reads the freshly-saved .env."""
+    """Build the plan for the chosen date, create a Gmail draft, and show a
+    preview of the actual email. Runs main.py in a subprocess so it reads the
+    freshly-saved .env; the rendered HTML is captured via --html-out."""
+    date = (request.form.get("date") or "").strip() or _pacific_today()
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        flash("Please pick a valid date.", "error")
+        return redirect(url_for("done"))
+
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fd, html_path = tempfile.mkstemp(suffix=".html")
+    os.close(fd)
+    email_html, ok, error = "", False, ""
     try:
         proc = subprocess.run(
-            [sys.executable, "main.py", "--draft-email"],
+            [sys.executable, "main.py", "--date", date,
+             "--draft-email", "--html-out", html_path],
             cwd=base, capture_output=True, text=True, timeout=180)
-        output = (proc.stdout or "") + (
-            ("\n[errors]\n" + proc.stderr) if proc.returncode and proc.stderr else "")
         ok = proc.returncode == 0
+        if ok:
+            with open(html_path) as f:
+                email_html = f.read()
+        else:
+            error = (proc.stderr or proc.stdout or "").strip().splitlines()[-1:] or [""]
+            error = error[0]
     except subprocess.TimeoutExpired:
-        output, ok = "Timed out after 3 minutes while building the plan.", False
+        error = "Timed out after 3 minutes while building the plan."
     except Exception as exc:  # noqa: BLE001
-        output, ok = f"Couldn't run the planner: {exc}", False
-    return render_template("plan_result.html", ok=ok, output=output,
+        error = f"Couldn't run the planner: {exc}"
+    finally:
+        try:
+            os.remove(html_path)
+        except OSError:
+            pass
+
+    nice_date = datetime.strptime(date, "%Y-%m-%d").strftime("%A, %B %-d, %Y")
+    return render_template("plan_result.html", ok=ok, email_html=email_html,
+                           error=error, date=nice_date,
                            recipients=", ".join(config.PLAN_RECIPIENTS))
+
+
+def _pacific_today():
+    return datetime.now(ZoneInfo("America/Los_Angeles")).strftime("%Y-%m-%d")
 
 
 # --------------------------------------------------------------------------
