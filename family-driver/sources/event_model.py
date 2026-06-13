@@ -27,15 +27,32 @@ class Event:
                 f"{self.start:%H:%M}-{self.end:%H:%M}{loc} ({self.source})>")
 
 
+def _norm_title(title):
+    """Title reduced to lowercase alphanumerics, so e.g. 'Fury 11U: Shooting
+    Camp' (TeamSnap) and 'Fury 11U - Shooting Camp' (Google) match."""
+    return "".join(c for c in (title or "").lower() if c.isalnum())
+
+
+def _location_score(e):
+    """How routable a location is: a street address (contains a digit) beats a
+    bare venue name, which beats nothing."""
+    if not e.location:
+        return 0
+    return 2 if any(c.isdigit() for c in e.location) else 1
+
+
 def dedupe(events):
-    """Drop copies of the same event that appear on multiple calendars
-    (same person, title, and times). Keeps the first copy with a location."""
-    seen = {}
-    for e in sorted(events, key=lambda e: (e.location is None,)):
-        key = (e.person, e.title.strip().lower(), e.start, e.end)
-        if key not in seen:
-            seen[key] = e
-    return list(seen.values())
+    """Collapse the same event arriving from multiple calendars/sources — same
+    person, normalized title, start and end. Keeps the copy with the most
+    routable location, so a Google Calendar street address wins over the bare
+    venue name TeamSnap returns for the same game/practice."""
+    best = {}
+    for e in events:
+        key = (e.person, _norm_title(e.title), e.start, e.end)
+        cur = best.get(key)
+        if cur is None or _location_score(e) > _location_score(cur):
+            best[key] = e
+    return list(best.values())
 
 
 def merge_and_sort(*event_lists, after: datetime = None):

@@ -73,6 +73,10 @@ def fetch_today_events(calendar_person_map: dict, day: datetime = None):
                 end = end.replace(tzinfo=timezone.utc)
 
             location = item.get("location")
+            if location:
+                # Calendar addresses often span multiple lines; flatten to one
+                # comma-separated line so the Maps API can geocode it.
+                location = ", ".join(p.strip() for p in location.splitlines() if p.strip())
             title = item.get("summary", "")
             title_lower = title.lower()
             # Discard virtual/URL locations (Zoom, Teams, Meet links) — not driveable.
