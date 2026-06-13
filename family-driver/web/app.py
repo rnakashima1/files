@@ -270,11 +270,6 @@ def _save_onboarding():
         updates["TEAMSNAP_TEAM_NAME"] = f.get("teamsnap_team", "").strip()
         updates["TEAMSNAP_PERSON"] = f.get("teamsnap_person", "").strip()
 
-    # Optional Anthropic API key for LLM reply interpretation.
-    anthropic_key = f.get("anthropic_key", "").strip()
-    if anthropic_key:
-        updates["ANTHROPIC_API_KEY"] = anthropic_key
-
     env_writer.update_env(updates)
 
     # Optional pasted Google OAuth client JSON.

@@ -8,15 +8,19 @@ This module hands that prose to Claude along with the day's events and gets back
 the same directive dicts the override system already applies (skip / location /
 person / driver / start / end).
 
-It degrades gracefully: returns None when no API key is configured or the SDK
-is missing or the call fails, so the caller falls back to the keyword parser.
+Credential model: a single SERVICE credential processes all replies — end users
+are never asked for a key. Resolution order: ANTHROPIC_API_KEY, then
+ANTHROPIC_AUTH_TOKEN (an OAuth token from a Claude subscription), else the
+SDK's default resolution (env / `ant auth login` profile) when
+ANTHROPIC_USE_LOGIN is set. With none configured, returns None so the caller
+falls back to the keyword parser.
 """
 import json
+import os
 from zoneinfo import ZoneInfo
 
 import config
 
-MODEL = "claude-opus-4-8"
 LOCAL_TZ = ZoneInfo("America/Los_Angeles")
 
 SYSTEM = (
@@ -57,17 +61,30 @@ def _events_brief(events):
     return brief
 
 
+def _make_client():
+    """Build an Anthropic client from the service credential, or None if no
+    credential is configured."""
+    if not (config.ANTHROPIC_API_KEY or config.ANTHROPIC_AUTH_TOKEN
+            or os.getenv("ANTHROPIC_USE_LOGIN")):
+        return None
+    import anthropic
+    if config.ANTHROPIC_API_KEY:
+        return anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+    if config.ANTHROPIC_AUTH_TOKEN:
+        return anthropic.Anthropic(auth_token=config.ANTHROPIC_AUTH_TOKEN)
+    return anthropic.Anthropic()  # resolve from env / `ant auth login` profile
+
+
 def interpret(text, events):
     """Return a list of (event_title, fix_dict), or None when the LLM is
     unavailable (the caller should then fall back to the keyword parser)."""
-    if not config.ANTHROPIC_API_KEY:
-        return None
     try:
-        import anthropic
+        client = _make_client()
     except ImportError:
         return None
+    if client is None:
+        return None
     try:
-        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
         payload = {
             "drivers": list(config.DRIVERS),
             "children": list(config.NON_DRIVERS),
@@ -75,7 +92,7 @@ def interpret(text, events):
             "reply": text,
         }
         resp = client.messages.create(
-            model=MODEL,
+            model=config.ANTHROPIC_MODEL,
             max_tokens=4096,
             thinking={"type": "adaptive"},
             system=SYSTEM,
