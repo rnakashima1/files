@@ -101,6 +101,13 @@
   </fieldset>
 
   <fieldset>
+    <legend>Smart replies <span class="muted">(optional)</span></legend>
+    <label>Anthropic API key <span class="muted">(lets the planner read free-form email replies, e.g. "Sanjo has a ride")</span>
+      <input type="text" name="anthropic_key" placeholder="leave blank to keep current">
+    </label>
+  </fieldset>
+
+  <fieldset>
     <legend>Outlook / Microsoft 365 <span class="muted">(optional)</span></legend>
     <label>Outlook calendar owner <span class="muted">(a driver's name; leave blank to skip)</span>
       <input type="text" name="outlook_owner" value="{{ existing.outlook_owner }}">

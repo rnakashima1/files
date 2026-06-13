@@ -30,6 +30,10 @@ GOOGLE_OAUTH_CLIENT_SECRETS_FILE = os.getenv("GOOGLE_OAUTH_CLIENT_SECRETS_FILE",
 GOOGLE_OAUTH_TOKEN_FILE = os.getenv("GOOGLE_OAUTH_TOKEN_FILE", "token.json")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
+# Anthropic API key — enables LLM interpretation of free-form email replies
+# (planner/llm_reply.py). Optional; without it, replies use the keyword parser.
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+
 MS_CLIENT_ID = os.getenv("MS_CLIENT_ID", "")
 MS_TENANT_ID = os.getenv("MS_TENANT_ID", "common")
 MS_CLIENT_SECRET = os.getenv("MS_CLIENT_SECRET", "")
