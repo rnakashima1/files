@@ -7,6 +7,7 @@ format with a search-and-follow-links pattern; this module does the minimal
 walk: find the team by name -> list events in range -> resolve location.
 """
 from datetime import datetime, time, timedelta
+from functools import lru_cache
 
 import requests
 
@@ -46,6 +47,31 @@ def _find_team_id(team_name: str) -> str:
     raise RuntimeError(f"TeamSnap team '{team_name}' not found")
 
 
+@lru_cache(maxsize=256)
+def _location_address(location_id) -> str:
+    """Fetch a TeamSnap location's full street address, flattened to one line.
+
+    TeamSnap keeps the address on a separate /locations/{id} resource (linked
+    from the event by location_id); the event itself only carries the venue
+    name. Returns None if unavailable. Cached per location id."""
+    if not location_id:
+        return None
+    try:
+        resp = requests.get(f"{API_BASE}/locations/{location_id}",
+                            headers=_headers(), timeout=30)
+        resp.raise_for_status()
+        items = resp.json().get("collection", {}).get("items", [])
+        if not items:
+            return None
+        d = {x["name"]: x.get("value") for x in items[0].get("data", [])}
+        addr = d.get("address")
+        if addr:
+            return ", ".join(p.strip() for p in addr.splitlines() if p.strip())
+    except Exception:
+        return None
+    return None
+
+
 def fetch_today_events(person="Sanjo", day: datetime = None):
     """Returns games + practices for today as a list of Event, attributed to `person`
     (the player on the team — defaults to Sanjo per the household roster)."""
@@ -74,8 +100,8 @@ def fetch_today_events(person="Sanjo", day: datetime = None):
             # TeamSnap doesn't always give an explicit end; default to 2 hours
             end = (datetime.fromisoformat(data["end_date"].replace("Z", "+00:00"))
                    if data.get("end_date") else start + timedelta(hours=2))
-            location = (data.get("location_name") or data.get("formatted_location_address")
-                        or data.get("location"))
+            location = (_location_address(data.get("location_id"))
+                        or data.get("location_name") or data.get("location"))
             title = data.get("name") or ("Game" if data.get("is_game") else "Practice")
             events.append(Event(
                 source="teamsnap",
