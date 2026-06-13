@@ -52,6 +52,9 @@ class Leg:
     # True when the rider is a driver going alone — they take the car themselves;
     # the car stays parked at their event until they drive home.
     self_drive: bool = False
+    # Human-readable assumption attached to this leg (e.g. "stays to watch"),
+    # surfaced in the email's Assumptions section.
+    assumption: Optional[str] = None
 
     def __repr__(self):
         d = f"[UBER]" if self.uber else (f"[{self.driver}]" if self.driver else "[UNASSIGNED]")
@@ -236,4 +239,54 @@ def summarize_conflicts(legs: List[Leg]) -> List[str]:
                 f"at {leg.depart_by:%H:%M} ({leg.origin} → {leg.destination}) "
                 f"— {leg.conflict_reason}."
             )
+    return notes
+
+
+def collect_assumptions(legs: List[Leg]) -> List[str]:
+    """Surface 'stay and watch' assumptions: cases where a parent stays at a
+    child's event rather than driving home and back, because the round trip home
+    would cost more than the time they'd actually get at home.
+
+    Rule: if the time you'd spend at home (event duration minus the round trip)
+    is less than the one-way drive home, it isn't worth going — assume the
+    parent stays to watch and goes directly to the next stop.
+
+    Marks the relevant PICKUP leg (leg.assumption) and returns display strings.
+    """
+    home = config.HOME_ADDRESS or "Home"
+    dropoff_by_event = {id(l.event): l for l in legs if l.kind == "DROPOFF"}
+    notes = []
+    for leg in legs:
+        if leg.kind != "PICKUP" or leg.uber or leg.self_drive or not leg.driver:
+            continue
+        # Only when the car stayed at the event (didn't go elsewhere first) and
+        # the post-pickup trip is home — i.e. the real "go home or wait?" choice.
+        if leg.from_location != leg.origin or leg.destination != home:
+            continue
+        one_way_home = leg.drive_minutes or 0          # event -> home
+        if one_way_home < 5:
+            continue
+        duration = (leg.event.end - leg.event.start).total_seconds() / 60.0
+        round_trip = 2 * one_way_home
+        time_at_home = duration - round_trip
+        if time_at_home >= one_way_home:
+            continue  # enough time that a trip home is worth it
+        drop = dropoff_by_event.get(id(leg.event))
+        if not drop or not drop.driver or drop.uber:
+            continue  # need a coherent drop-off driver for someone to stay
+        # The parent who dropped off also does the pick-up — they stayed to watch
+        # rather than driving home and back, so keep the same driver for both.
+        leg.driver = drop.driver
+        dur, rt = int(round(duration)), int(round(round_trip))
+        if duration <= round_trip:
+            why = (f"the event runs ~{dur} min but driving home and back is "
+                   f"~{rt} min")
+        else:
+            why = (f"driving home and back (~{rt} min) would leave only "
+                   f"~{int(round(time_at_home))} min at home")
+        leg.assumption = f"{leg.driver} stays to watch"
+        notes.append(
+            f"{leg.driver} stays at {leg.origin} to watch {leg.rider}'s "
+            f"“{leg.event.title}” instead of driving home — {why}."
+        )
     return notes

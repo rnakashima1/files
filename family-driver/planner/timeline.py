@@ -42,7 +42,7 @@ def render_timeline(events: List[Event]) -> str:
 
 
 def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
-                     questions: list = None) -> str:
+                     questions: list = None, assumptions: list = None) -> str:
     """Render the driving plan as an HTML email body."""
     rows = []
 
@@ -82,9 +82,19 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
             'on this thread.</p>'
         )
 
+    def _assumptions_html():
+        if not assumptions:
+            return
+        rows.append(
+            '<h3 style="font-family:sans-serif;color:#3b5bdb;margin:16px 0 4px">'
+            '📋 Assumptions</h3>')
+        for a in assumptions:
+            rows.append(f'<div style="margin:4px 0">🅿️ {a}</div>')
+
     if not legs:
         rows.append('<p style="font-family:sans-serif;color:#555">No driving needed today.</p>')
         _questions_html()
+        _assumptions_html()
         return ('<html><body style="font-family:sans-serif;font-size:14px;color:#333;'
                 'max-width:600px;margin:0 auto;padding:16px">\n'
                 + "\n".join(rows) + "\n</body></html>")
@@ -175,6 +185,8 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
                                f'(driving directly from {chained_from})</span>')
             else:
                 depart_note = ''
+            watch_note = (f' <span style="color:#3b5bdb;font-size:12px">'
+                          f'(🅿️ {leg.assumption})</span>') if leg.assumption else ''
             row(
                 f'{time_str} &nbsp; {_car("#c0392b")} &nbsp;'
                 f'{driver_html}'
@@ -183,6 +195,7 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
                 + (f' ({eta_note})' if eta_note else '')
                 + f', home by {_fmt(_local(leg.arrive_by))}'
                 + depart_note
+                + watch_note
                 + f' &nbsp; {maps}'
             )
             row(
@@ -206,6 +219,7 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
             )
 
     _questions_html()
+    _assumptions_html()
 
     rows.append('<hr style="border:none;border-top:1px solid #eee;margin:12px 0">')
     uber_legs = [l for l in legs if l.uber]
@@ -228,7 +242,8 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
     )
 
 
-def render_plan(legs: List[Leg], conflicts: List[str], day: datetime) -> str:
+def render_plan(legs: List[Leg], conflicts: List[str], day: datetime,
+                assumptions: list = None) -> str:
     lines = [f"DRIVING PLAN — {day:%A, %B %-d, %Y}", "=" * 50, ""]
     if not legs:
         lines.append("No driving needed today — no location-based events.")
@@ -273,6 +288,11 @@ def render_plan(legs: List[Leg], conflicts: List[str], day: datetime) -> str:
                 f"[DROPOFF] {leg.origin} -> {leg.destination}{eta_note}\n"
                 f"          for '{leg.event.title}' ({_fmt(es)}-{_fmt(ee)})"
             )
+
+    if assumptions:
+        lines.append("\nASSUMPTIONS")
+        for a in assumptions:
+            lines.append(f"  • {a}")
 
     uber_legs = [l for l in legs if l.uber]
     if uber_legs:
