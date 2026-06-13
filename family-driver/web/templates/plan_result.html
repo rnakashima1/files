@@ -5,7 +5,8 @@
 <h2>🚗 Draft ready — {{ date }}</h2>
 <p>Saved to your Gmail drafts{% if recipients %} (addressed to {{ recipients }}){% endif %}.
   Here's exactly what the email looks like:</p>
-<iframe class="email-preview" sandbox srcdoc="{{ email_html }}"></iframe>
+<iframe class="email-preview" sandbox="allow-popups allow-popups-to-escape-sandbox"
+        srcdoc="{{ email_html }}"></iframe>
 {% else %}
 <h2>⚠️ Couldn't build the drive</h2>
 <p>Something stalled while building the plan for {{ date }}.</p>

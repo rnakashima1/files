@@ -55,6 +55,9 @@ class Leg:
     # Human-readable assumption attached to this leg (e.g. "stays to watch"),
     # surfaced in the email's Assumptions section.
     assumption: Optional[str] = None
+    # True when the drive time is a flat fallback (the Routes API couldn't
+    # resolve the address) rather than a real traffic-aware lookup.
+    estimated: bool = False
 
     def __repr__(self):
         d = f"[UBER]" if self.uber else (f"[{self.driver}]" if self.driver else "[UNASSIGNED]")
@@ -65,11 +68,19 @@ class Leg:
 
 
 def _drive_estimate(origin, destination, depart_time):
+    """Returns (minutes, distance_km, estimated).
+
+    estimated=True means the Routes API couldn't resolve the route (usually a
+    vague location name with no full address), so a flat fallback time is used.
+    Callers flag this so a fallback isn't shown as a real, looked-up time.
+    Same origin/destination returns 0 (not the fallback)."""
     if origin == destination:
-        return 0, 0
+        return 0, 0, False
     result = get_drive_time_cached(origin, destination, depart_time)
-    minutes = result.get("duration_minutes") or FALLBACK_DRIVE_MINUTES
-    return minutes, result.get("distance_km")
+    minutes = result.get("duration_minutes")
+    if minutes is None:
+        return FALLBACK_DRIVE_MINUTES, result.get("distance_km"), True
+    return minutes, result.get("distance_km"), False
 
 
 def _build_legs(events: List[Event]) -> List[Leg]:
@@ -86,20 +97,21 @@ def _build_legs(events: List[Event]) -> List[Leg]:
         for i, e in enumerate(rider_events):
             buffer_ = timedelta(minutes=config.ARRIVAL_BUFFER_MINUTES)
 
-            depart_minutes, distance_km = _drive_estimate(
+            depart_minutes, distance_km, est_drop = _drive_estimate(
                 prev_location, e.location, e.start - buffer_)
             depart_by = e.start - buffer_ - timedelta(minutes=depart_minutes)
             legs.append(Leg("DROPOFF", rider, e, prev_location, e.location,
                             depart_by, e.start,
-                            drive_minutes=depart_minutes, distance_km=distance_km))
+                            drive_minutes=depart_minutes, distance_km=distance_km,
+                            estimated=est_drop))
 
             next_location = config.HOME_ADDRESS or "Home"
             if i + 1 < len(rider_events):
                 next_location = rider_events[i + 1].location
 
-            pickup_minutes, pickup_km = _drive_estimate(e.location, next_location, e.end)
+            pickup_minutes, pickup_km, est_pick = _drive_estimate(e.location, next_location, e.end)
             # Driver must leave home in time to ARRIVE at the pickup location by e.end.
-            home_to_pickup_minutes, _ = _drive_estimate(
+            home_to_pickup_minutes, _, _ = _drive_estimate(
                 config.HOME_ADDRESS, e.location, e.end)
             depart_for_pickup = e.end - timedelta(minutes=home_to_pickup_minutes)
             # arrive_by includes PICKUP_SLACK so riders can wait a few minutes
@@ -108,7 +120,8 @@ def _build_legs(events: List[Event]) -> List[Leg]:
             legs.append(Leg("PICKUP", rider, e, e.location, next_location,
                             depart_for_pickup,
                             e.end + timedelta(minutes=pickup_minutes) + pickup_slack,
-                            drive_minutes=pickup_minutes, distance_km=pickup_km))
+                            drive_minutes=pickup_minutes, distance_km=pickup_km,
+                            estimated=est_pick))
             prev_location = next_location
 
     return sorted(legs, key=lambda l: l.depart_by)
@@ -149,8 +162,10 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
 
     for leg in legs:
         # Travel from car's actual current position to this leg's origin.
-        travel_to_origin, _ = _drive_estimate(
+        travel_to_origin, _, est_to = _drive_estimate(
             car_location, leg.origin, car_free_at or leg.depart_by)
+        if est_to:
+            leg.estimated = True
 
         if car_free_at is not None:
             # Must be able to reach origin and complete the leg by arrive_by.
@@ -172,7 +187,7 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
             #         to free the car for the next leg.
             if leg.kind == "DROPOFF":
                 # Total trip = car's position -> origin (get rider) -> destination.
-                haul = leg.drive_minutes or FALLBACK_DRIVE_MINUTES
+                haul = FALLBACK_DRIVE_MINUTES if leg.drive_minutes is None else leg.drive_minutes
                 latest_depart = (leg.arrive_by
                                  - timedelta(minutes=config.ARRIVAL_BUFFER_MINUTES)
                                  - timedelta(minutes=travel_to_origin + haul))
@@ -212,7 +227,7 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
         # Record where the car is physically coming from for this leg.
         leg.from_location = car_location
 
-        drive_mins = leg.drive_minutes or FALLBACK_DRIVE_MINUTES
+        drive_mins = FALLBACK_DRIVE_MINUTES if leg.drive_minutes is None else leg.drive_minutes
         if leg.self_drive and leg.kind == "DROPOFF":
             # Car is parked at the driver's event until they head home.
             car_free_at = leg.event.end
@@ -222,7 +237,7 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
         else:
             # PICKUP: car drives to pickup location then to destination.
             # Actual return = depart + travel_to_pickup + drive_to_destination.
-            ride_home = leg.drive_minutes or FALLBACK_DRIVE_MINUTES
+            ride_home = FALLBACK_DRIVE_MINUTES if leg.drive_minutes is None else leg.drive_minutes
             car_free_at = leg.depart_by + timedelta(minutes=travel_to_origin + ride_home)
         car_location = leg.destination
         prev_leg = leg
@@ -257,7 +272,8 @@ def collect_assumptions(legs: List[Leg]) -> List[str]:
     dropoff_by_event = {id(l.event): l for l in legs if l.kind == "DROPOFF"}
     notes = []
     for leg in legs:
-        if leg.kind != "PICKUP" or leg.uber or leg.self_drive or not leg.driver:
+        if (leg.kind != "PICKUP" or leg.uber or leg.self_drive
+                or not leg.driver or leg.estimated):
             continue
         # Only when the car stayed at the event (didn't go elsewhere first) and
         # the post-pickup trip is home — i.e. the real "go home or wait?" choice.

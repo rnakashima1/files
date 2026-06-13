@@ -122,7 +122,8 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
             "travelmode": "driving",
         })
         url = f"https://www.google.com/maps/dir/?{params}"
-        return (f'<a href="{url}" style="color:#1a73e8;font-size:12px;'
+        return (f'<a href="{url}" target="_blank" rel="noopener noreferrer" '
+                f'style="color:#1a73e8;font-size:12px;'
                 f'text-decoration:none">🗺 Directions</a>')
 
     def _car(color):
@@ -144,7 +145,8 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
     for leg in legs:
         driver = leg.driver or "UNASSIGNED"
         driver_color = DRIVER_COLORS.get(driver, "#555")
-        eta_note = f"~{leg.drive_minutes:.0f} min" if leg.drive_minutes else ""
+        eta_note = (f"~{leg.drive_minutes:.0f} min"
+                    + (" est." if leg.estimated else "")) if leg.drive_minutes else ""
         depart = _local(leg.depart_by)
         es, ee = _local(leg.event.start), _local(leg.event.end)
         time_str = f'<span style="font-weight:bold">{_fmt(depart)}</span>'
@@ -268,7 +270,8 @@ def render_plan(legs: List[Leg], conflicts: List[str], day: datetime,
     lines.append("Legend: DROPOFF = drive child TO an event, PICKUP = drive child FROM it.\n")
     for leg in legs:
         driver = leg.driver or "** UNASSIGNED — needs a decision **"
-        eta_note = f" (~{leg.drive_minutes:.0f} min drive" + (
+        est = " est." if leg.estimated else ""
+        eta_note = f" (~{leg.drive_minutes:.0f} min drive{est}" + (
             f", {leg.distance_km} km)" if leg.distance_km else ")")
         depart = _local(leg.depart_by)
         es, ee = _local(leg.event.start), _local(leg.event.end)
