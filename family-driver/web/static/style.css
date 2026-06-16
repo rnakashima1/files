@@ -191,15 +191,38 @@ button.link-button { border: none; padding: 0; margin-top: 8px; }
 }
 .progress .bar {
   position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: 999px;
-  background: linear-gradient(90deg, var(--purple), var(--pink) 60%, var(--gold));
+  background: var(--purple);          /* solid — clearly shows how far along */
   transition: width .45s cubic-bezier(.2,.8,.2,1);
-  box-shadow: 0 0 12px rgba(255,111,174,.6);
 }
 .progress .bar::after {
   content: "🪄"; position: absolute; right: -3px; top: 50%; transform: translateY(-50%);
   font-size: 15px; line-height: 0;
 }
-.progress.full .bar { background: linear-gradient(90deg, var(--mint), var(--purple), var(--pink)); }
+.progress.full .bar { background: var(--mint); }   /* solid green when complete */
+
+/* ---- help tooltip (the "?" badge) ---- */
+.help {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; margin-left: 5px; border-radius: 50%;
+  background: #ece8fb; color: var(--purple); font-size: 11px; font-weight: 700;
+  cursor: help; vertical-align: middle;
+}
+.help .tip {
+  position: absolute; bottom: 135%; left: 50%; transform: translateX(-50%);
+  width: 262px; background: #2e2557; color: #fff; font-weight: 400;
+  text-transform: none; letter-spacing: normal; font-size: 12.5px; line-height: 1.5;
+  text-align: left; padding: 12px 14px; border-radius: 12px;
+  box-shadow: 0 14px 34px -12px rgba(46,37,87,.7);
+  opacity: 0; visibility: hidden; transition: opacity .15s; z-index: 30; pointer-events: none;
+}
+.help .tip::after {
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: #2e2557;
+}
+.help:hover .tip, .help:focus .tip, .help:focus-within .tip { opacity: 1; visibility: visible; }
+.help .tip strong { color: #ffd54a; }
+.help .tip ol { margin: 6px 0 0; padding-left: 18px; }
+.help .tip li { margin: 4px 0; }
 
 @media (max-width: 560px) {
   .people-grid { grid-template-columns: 1fr; }

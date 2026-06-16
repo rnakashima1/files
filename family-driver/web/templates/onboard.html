@@ -29,7 +29,7 @@
     <!-- 2: cars -->
     <section class="wizard-step" data-req="cars">
       <div class="step-kicker"></div>
-      <legend>How many cars in the garage? 🚗</legend>
+      <legend>How many cars do you have? 🚗</legend>
       <p class="muted">The fairy shares them across the household.</p>
       <label>Number of cars
         <input type="number" name="num_cars" min="1" max="10" value="{{ existing.num_cars or 1 }}">
@@ -46,7 +46,7 @@
         address (usually their Gmail) — optional.</p>
       <div class="row-headers people-grid">
         <span>Name</span><span>Role</span>
-        <span>Email <span class="muted">(calendar)</span></span><span></span>
+        <span>Email <span class="muted">(calendar)</span><span class="help" tabindex="0" role="button" aria-label="How to find a calendar ID">?<span class="tip"><strong>Finding a calendar address</strong><ol><li>For a person's own calendar this is usually just their <em>Gmail address</em>.</li><li>For another calendar: open Google Calendar on the web.</li><li>Hover the calendar in the left sidebar → click ⋮ → <em>Settings and sharing</em>.</li><li>Scroll to <em>Integrate calendar</em> and copy the <em>Calendar ID</em>.</li></ol></span></span></span><span></span>
       </div>
       <div id="people">
         {% for p in existing.people %}
@@ -73,7 +73,7 @@
         calendar, a work calendar, etc.
         {% if existing.extras %}These were imported from your existing setup.{% endif %}</p>
       <div class="row-headers extra-grid">
-        <span>Label</span><span>Calendar ID <span class="muted">(or email address)</span></span><span></span>
+        <span>Label</span><span>Calendar ID <span class="muted">(or email address)</span><span class="help" tabindex="0" role="button" aria-label="How to find a calendar ID">?<span class="tip"><strong>Finding a Calendar ID</strong><ol><li>Open Google Calendar on the web.</li><li>Hover the calendar in the left sidebar → click ⋮ → <em>Settings and sharing</em>.</li><li>Scroll down to <em>Integrate calendar</em>.</li><li>Copy the <em>Calendar ID</em> (often ends in <code>@group.calendar.google.com</code>).</li></ol></span></span></span><span></span>
       </div>
       <div id="extras">
         {% for e in existing.extras %}
@@ -105,16 +105,15 @@
       <p class="field-error"></p>
     </section>
 
-    <!-- 6: google sign-in (optional) -->
+    <!-- 6: connect calendars (optional) -->
     <section class="wizard-step">
       <div class="step-kicker"></div>
-      <legend>Connect Google 🔗 <span class="optional-pill">optional</span></legend>
-      <label>Google OAuth client JSON <span class="muted">(paste the downloaded file)</span>
-        <textarea name="google_credentials" rows="4"
-          placeholder='{"installed":{"client_id":"...","client_secret":"..."}}'></textarea>
-      </label>
-      <p class="muted">Already connected? Skip this. After saving a new file you'll
-        do a one-time Google sign-in in the terminal.</p>
+      <legend>Connect your calendars 🔗 <span class="optional-pill">optional</span></legend>
+      <p class="muted">Fairied reads your family's Google Calendars to build the
+        plan. Connecting is a quick <strong>one-time Google sign-in</strong> —
+        nothing to download, find, or paste. We'll walk you through it right
+        after setup.</p>
+      <p class="muted">Already connected? Just continue. 👍</p>
     </section>
 
     <!-- 7: outlook (optional) -->
