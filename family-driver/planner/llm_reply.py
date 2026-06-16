@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 
 import config
 
-LOCAL_TZ = ZoneInfo("America/Los_Angeles")
+LOCAL_TZ = ZoneInfo(config.TIMEZONE)
 
 SYSTEM = (
     "You convert a parent's free-form email reply into structured edits to a "

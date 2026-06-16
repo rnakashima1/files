@@ -34,6 +34,10 @@ TEAMSNAP_ACCESS_TOKEN = os.getenv("TEAMSNAP_ACCESS_TOKEN", "")
 TEAMSNAP_TEAM_NAME = os.getenv("TEAMSNAP_TEAM_NAME", "Sanjo's Fury")
 
 HOME_ADDRESS = os.getenv("HOME_ADDRESS", "")
+# IANA timezone for the household (where they live). Drives all displayed times
+# and the interpretation of times in email replies. Onboarding derives it from
+# the home address; defaults to US Pacific.
+TIMEZONE = os.getenv("TIMEZONE", "America/Los_Angeles")
 DRIVERS = _list("DRIVERS", "Komaki,Ryan")
 NON_DRIVERS = _list("NON_DRIVERS", "Oto,Lara,Sanjo")
 
