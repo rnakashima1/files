@@ -245,15 +245,27 @@ def build_driving_plan(events: List[Event], driver_calendars: dict = None,
         if leg.self_drive and leg.kind == "DROPOFF":
             # Car is parked at the driver's event until they head home.
             car_free_at = leg.event.end
+            car_location = leg.destination
         elif leg.kind == "DROPOFF":
-            # Car arrives at destination and is immediately free.
-            car_free_at = leg.depart_by + timedelta(minutes=drive_mins)
+            arrive_venue = leg.depart_by + timedelta(minutes=drive_mins)
+            home = config.HOME_ADDRESS or "Home"
+            d_home, _, _ = _drive_estimate(leg.destination, home, arrive_venue)
+            gap_min = (leg.event.end - arrive_venue).total_seconds() / 60.0
+            # Until the pick-up, the car either waits at the venue (the
+            # "watch the event" case) or goes home. Go home when the time at
+            # home would exceed the one-way drive — otherwise it's not worth it.
+            if d_home and (gap_min - 2 * d_home) >= d_home:
+                car_location = home
+                car_free_at = arrive_venue + timedelta(minutes=d_home)
+            else:
+                car_location = leg.destination
+                car_free_at = arrive_venue
         else:
             # PICKUP: car drives to pickup location then to destination.
             # Actual return = depart + travel_to_pickup + drive_to_destination.
             ride_home = FALLBACK_DRIVE_MINUTES if leg.drive_minutes is None else leg.drive_minutes
             car_free_at = leg.depart_by + timedelta(minutes=travel_to_origin + ride_home)
-        car_location = leg.destination
+            car_location = leg.destination
         prev_leg = leg
 
     return legs
