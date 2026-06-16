@@ -10,7 +10,7 @@ import config
 from sources.event_model import Event, merge_and_sort
 from planner.driving_plan import Leg
 
-LOCAL_TZ = ZoneInfo("America/Los_Angeles")
+LOCAL_TZ = ZoneInfo(config.TIMEZONE)
 
 # Colours assigned to each driver's name in the email, in roster order, when
 # no explicit colour is set in config.DRIVER_COLORS.

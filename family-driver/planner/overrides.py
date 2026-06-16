@@ -9,6 +9,8 @@ Storage: overrides.json in the project root:
 """
 import json
 import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import config
 
@@ -44,10 +46,21 @@ def set_override(day_key: str, title: str, **fields):
     _save(data)
 
 
-def _retime(dt, hhmm):
-    """Return dt with its time replaced by 'HH:MM' (keeps date + tzinfo)."""
+def _retime(dt, hhmm, day_key):
+    """Return a datetime on day_key (YYYY-MM-DD) at HH:MM wall-clock time in the
+    household timezone (config.TIMEZONE), expressed in dt's original tzinfo.
+
+    The date is built explicitly from day_key rather than derived from dt,
+    because converting an all-day event's stored UTC midnight to local time can
+    land on the previous calendar day. Reply times are always local
+    wall-clock — never converted from UTC."""
     h, m = (int(x) for x in hhmm.split(":"))
-    return dt.replace(hour=h, minute=m, second=0, microsecond=0)
+    y, mo, d = (int(x) for x in day_key.split("-"))
+    local_tz = ZoneInfo(config.TIMEZONE)
+    if dt.tzinfo is None:
+        return datetime(y, mo, d, h, m, tzinfo=local_tz)
+    local_dt = datetime(y, mo, d, h, m, tzinfo=local_tz)
+    return local_dt.astimezone(dt.tzinfo)
 
 
 def apply_overrides(events, day_key: str):
@@ -68,9 +81,9 @@ def apply_overrides(events, day_key: str):
                 if fix.get("driver"):
                     e.forced_driver = fix["driver"]
                 if fix.get("start"):
-                    e.start = _retime(e.start, fix["start"])
+                    e.start = _retime(e.start, fix["start"], day_key)
                 if fix.get("end"):
-                    e.end = _retime(e.end, fix["end"])
+                    e.end = _retime(e.end, fix["end"], day_key)
                 break
     return events
 

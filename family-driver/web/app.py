@@ -270,6 +270,12 @@ def _save_onboarding():
         updates["TEAMSNAP_TEAM_NAME"] = f.get("teamsnap_team", "").strip()
         updates["TEAMSNAP_PERSON"] = f.get("teamsnap_person", "").strip()
 
+    # Derive the household timezone from the home address (best effort).
+    from sources.geo import timezone_for_address
+    tz = timezone_for_address(updates.get("HOME_ADDRESS", ""))
+    if tz:
+        updates["TIMEZONE"] = tz
+
     env_writer.update_env(updates)
 
     # Optional pasted Google OAuth client JSON.

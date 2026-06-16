@@ -54,6 +54,10 @@ TEAMSNAP_PERSON = os.getenv("TEAMSNAP_PERSON", "")
 # Household roster — populated by onboarding. "Drivers" are parents who can
 # drive; "non-drivers" are children (or any rider who needs a ride).
 HOME_ADDRESS = os.getenv("HOME_ADDRESS", "")
+# IANA timezone for the household (where they live). Drives all displayed times
+# and the interpretation of times in email replies. Onboarding derives it from
+# the home address; defaults to US Pacific.
+TIMEZONE = os.getenv("TIMEZONE", "America/Los_Angeles")
 NUM_CARS = int(os.getenv("NUM_CARS", "1") or "1")
 DRIVERS = _list("DRIVERS")
 NON_DRIVERS = _list("NON_DRIVERS")
