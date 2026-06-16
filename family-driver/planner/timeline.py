@@ -150,14 +150,15 @@ def render_plan_html(legs: List[Leg], conflicts: List[str], day: datetime,
             maps = _maps_link(leg.origin, leg.destination)
 
         if leg.self_drive and not leg.uber:
+            who = "the family" if getattr(leg.event, "family_trip", False) else "themself"
             if leg.kind == "DROPOFF":
-                desc = (f'{driver_html} drives <strong>themself</strong>'
+                desc = (f'{driver_html} drives <strong>{who}</strong>'
                         f' to {leg.destination}')
                 icon = _car("#1a73e8")
                 detail = f'📅 <em>{leg.event.title}</em> ({_fmt(es)}–{_fmt(ee)})'
                 maps = _maps_link(leg.origin, leg.destination)
             else:
-                desc = (f'{driver_html} drives <strong>themself</strong> home'
+                desc = (f'{driver_html} drives <strong>{who}</strong> home'
                         f' from {leg.origin}')
                 icon = _car("#c0392b")
                 detail = f'📅 <em>{leg.event.title}</em> (ends {_fmt(ee)})'
@@ -260,15 +261,16 @@ def render_plan(legs: List[Leg], conflicts: List[str], day: datetime,
         depart = _local(leg.depart_by)
         es, ee = _local(leg.event.start), _local(leg.event.end)
         if leg.self_drive and not leg.uber:
+            who = "the family" if getattr(leg.event, "family_trip", False) else "themself"
             if leg.kind == "DROPOFF":
                 lines.append(
-                    f"  {_fmt(depart)}  {driver:8s} drives themself "
+                    f"  {_fmt(depart)}  {driver:8s} drives {who} "
                     f"to {leg.destination}{eta_note}\n"
                     f"          for '{leg.event.title}' ({_fmt(es)}-{_fmt(ee)})"
                 )
             else:
                 lines.append(
-                    f"  {_fmt(depart)}  {driver:8s} drives themself home "
+                    f"  {_fmt(depart)}  {driver:8s} drives {who} home "
                     f"from {leg.origin}{eta_note}\n"
                     f"          ('{leg.event.title}' ends {_fmt(ee)})"
                 )
