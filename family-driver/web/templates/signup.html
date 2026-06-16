@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Create account{% endblock %}
 {% block content %}
-<h2>🔑 Get your keys</h2>
-<p class="muted">Register your driver's license — verify your email next, then map your household.</p>
+<h2>✨ Create your family's account</h2>
+<p class="muted">Verify your email next, then a few quick questions and the carpool fairy takes over.</p>
 <form method="post" action="{{ url_for('signup') }}">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
   <label>Email
@@ -14,7 +14,7 @@
   <label>Confirm password
     <input type="password" name="confirm" minlength="8" required>
   </label>
-  <button type="submit">Get your keys</button>
+  <button type="submit" class="primary">✨ Create account</button>
 </form>
-<p class="muted">Already have keys? <a href="{{ url_for('login') }}">Hit the road</a></p>
+<p class="muted" style="text-align:center;margin-top:14px">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
 {% endblock %}

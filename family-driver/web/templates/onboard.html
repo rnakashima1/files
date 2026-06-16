@@ -1,179 +1,306 @@
 {% extends "base.html" %}
-{% block title %}Map your household{% endblock %}
+{% block title %}Set up your family{% endblock %}
 {% block content %}
 <div class="topbar">
-  <span class="muted">Driver's seat: {{ account }}</span>
-  <a href="{{ url_for('logout') }}" class="muted">Pull over &amp; log out</a>
+  <span class="muted">Signed in as {{ account }}</span>
+  <a href="{{ url_for('logout') }}" class="muted">Log out</a>
 </div>
 
-<h2>🗺️ Map your household</h2>
-<p class="muted">This plots your local <code>.env</code> route. Come back and re-route anytime.</p>
+<h2>Let's map your family's day ✨</h2>
+<p class="muted">A few quick questions and the carpool fairy takes it from here.</p>
 
-<form method="post" action="{{ url_for('onboard') }}">
+<form method="post" action="{{ url_for('onboard') }}" id="wizard">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 
-  <fieldset>
-    <legend>Home base &amp; garage</legend>
-    <label>Home address
-      <input type="text" name="home_address" value="{{ existing.home_address }}"
-             placeholder="123 Main St, Your City, ST 00000" required>
-    </label>
-    <label>Cars in the garage
-      <input type="number" name="num_cars" min="1" max="10"
-             value="{{ existing.num_cars or 1 }}" required>
-    </label>
-  </fieldset>
+  <div id="steps">
 
-  <fieldset>
-    <legend>Who's riding along?</legend>
-    <p class="muted">Mark each person as a <strong>driver / parent</strong> or a
-      <strong>child</strong> (non-driver). <strong>Email</strong> is the person's
-      Google Calendar address (usually their Gmail) that we read for their events
-      — optional, and you can leave it blank for anyone without one.</p>
-    <div class="row-headers people-grid">
-      <span>Name</span>
-      <span>Role</span>
-      <span>Email <span class="muted">(calendar address)</span></span>
-      <span></span>
-    </div>
-    <div id="people">
-      {% for p in existing.people %}
-      <div class="person-row people-grid">
-        <input type="text" name="person_name" value="{{ p.name }}" placeholder="e.g. Alex" required>
-        <select name="person_role">
-          <option value="driver" {{ 'selected' if p.role == 'driver' }}>Driver / parent</option>
-          <option value="child" {{ 'selected' if p.role == 'child' }}>Child (non-driver)</option>
-        </select>
-        <input type="text" name="person_calid" value="{{ p.calid }}" placeholder="name@gmail.com">
-        <button type="button" class="remove" onclick="this.closest('.person-row').remove()">✕</button>
+    <!-- 1: home address -->
+    <section class="wizard-step active" data-req="home">
+      <div class="step-kicker"></div>
+      <legend>Where's home base? 🏡</legend>
+      <p class="muted">Where most trips start and end.</p>
+      <label>Home address
+        <input type="text" name="home_address" value="{{ existing.home_address }}"
+               placeholder="123 Main St, Your City, ST 00000">
+      </label>
+      <p class="field-error"></p>
+    </section>
+
+    <!-- 2: cars -->
+    <section class="wizard-step" data-req="cars">
+      <div class="step-kicker"></div>
+      <legend>How many cars in the garage? 🚗</legend>
+      <p class="muted">The fairy shares them across the household.</p>
+      <label>Number of cars
+        <input type="number" name="num_cars" min="1" max="10" value="{{ existing.num_cars or 1 }}">
+      </label>
+      <p class="field-error"></p>
+    </section>
+
+    <!-- 3: family members -->
+    <section class="wizard-step" data-req="people">
+      <div class="step-kicker"></div>
+      <legend>Who's in the family? 👨‍👩‍👧‍👦</legend>
+      <p class="muted">Mark each person a <strong>driver / parent</strong> or a
+        <strong>child</strong>. <strong>Email</strong> is their Google Calendar
+        address (usually their Gmail) — optional.</p>
+      <div class="row-headers people-grid">
+        <span>Name</span><span>Role</span>
+        <span>Email <span class="muted">(calendar)</span></span><span></span>
       </div>
-      {% endfor %}
-    </div>
-    <button type="button" class="add" onclick="addPerson()">+ Add a passenger</button>
-  </fieldset>
-
-  <fieldset>
-    <legend>Shared calendars <span class="muted">(optional)</span></legend>
-    <p class="muted">Calendars that aren't tied to one person — e.g. a shared
-      <em>Family</em> calendar or a work calendar.
-      {% if existing.extras %}These were imported from your existing setup
-      (your <code>GOOGLE_CALENDAR_MAP</code>); edit or remove any you don't want.{% endif %}</p>
-    <div class="row-headers extra-grid">
-      <span>Label</span>
-      <span>Calendar ID <span class="muted">(or calendar's email address)</span></span>
-      <span></span>
-    </div>
-    <div id="extras">
-      {% for e in existing.extras %}
-      <div class="extra-row extra-grid">
-        <input type="text" name="extra_label" value="{{ e.label }}" placeholder="e.g. Family">
-        <input type="text" name="extra_calid" value="{{ e.calid }}" placeholder="...@group.calendar.google.com">
-        <button type="button" class="remove" onclick="this.closest('.extra-row').remove()">✕</button>
+      <div id="people">
+        {% for p in existing.people %}
+        <div class="person-row people-grid">
+          <input type="text" name="person_name" value="{{ p.name }}" placeholder="e.g. Alex">
+          <select name="person_role">
+            <option value="driver" {{ 'selected' if p.role == 'driver' }}>Driver / parent</option>
+            <option value="child" {{ 'selected' if p.role == 'child' }}>Child (non-driver)</option>
+          </select>
+          <input type="text" name="person_calid" value="{{ p.calid }}" placeholder="name@gmail.com">
+          <button type="button" class="remove" onclick="this.closest('.person-row').remove();sync()">✕</button>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
-    <button type="button" class="add" onclick="addExtra()">+ Add a calendar</button>
-  </fieldset>
+      <button type="button" class="add" onclick="addPerson()">+ Add a family member</button>
+      <p class="field-error"></p>
+    </section>
 
-  <fieldset>
-    <legend>Who rides shotgun on the daily summary?</legend>
-    <p class="muted">Email addresses that get the morning driving plan.</p>
-    <div id="recipients">
-      {% for r in existing.recipients %}
-      <div class="recipient-row">
-        <input type="email" name="recipient" value="{{ r }}" placeholder="email@example.com">
-        <button type="button" class="remove" onclick="this.closest('.recipient-row').remove()">✕</button>
+    <!-- 4: shared calendars (optional) -->
+    <section class="wizard-step">
+      <div class="step-kicker"></div>
+      <legend>Any shared calendars? 📅 <span class="optional-pill">optional</span></legend>
+      <p class="muted">Calendars not tied to one person — a shared <em>Family</em>
+        calendar, a work calendar, etc.
+        {% if existing.extras %}These were imported from your existing setup.{% endif %}</p>
+      <div class="row-headers extra-grid">
+        <span>Label</span><span>Calendar ID <span class="muted">(or email address)</span></span><span></span>
       </div>
-      {% endfor %}
-    </div>
-    <button type="button" class="add" onclick="addRecipient()">+ Add recipient</button>
-  </fieldset>
+      <div id="extras">
+        {% for e in existing.extras %}
+        <div class="extra-row extra-grid">
+          <input type="text" name="extra_label" value="{{ e.label }}" placeholder="e.g. Family">
+          <input type="text" name="extra_calid" value="{{ e.calid }}" placeholder="...@group.calendar.google.com">
+          <button type="button" class="remove" onclick="this.closest('.extra-row').remove();sync()">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="add" onclick="addExtra()">+ Add a calendar</button>
+      <p class="field-error"></p>
+    </section>
 
-  <fieldset>
-    <legend>Google sign-in <span class="muted">(optional)</span></legend>
-    <label>Google OAuth client JSON <span class="muted">(paste the downloaded file)</span>
-      <textarea name="google_credentials" rows="4"
-        placeholder='{"installed":{"client_id":"...","client_secret":"..."}}'></textarea>
-    </label>
-    <p class="muted">Already connected? You can skip this. After saving a new file,
-      you'll do a one-time Google sign-in in the terminal to authorize calendar
-      + email access.</p>
-  </fieldset>
+    <!-- 5: recipients -->
+    <section class="wizard-step" data-req="recipients">
+      <div class="step-kicker"></div>
+      <legend>Who gets the daily plan? ✉️</legend>
+      <p class="muted">Email addresses that receive the morning driving plan.</p>
+      <div id="recipients">
+        {% for r in existing.recipients %}
+        <div class="recipient-row">
+          <input type="email" name="recipient" value="{{ r }}" placeholder="email@example.com">
+          <button type="button" class="remove" onclick="this.closest('.recipient-row').remove();sync()">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="add" onclick="addRecipient()">+ Add recipient</button>
+      <p class="field-error"></p>
+    </section>
 
-  <fieldset>
-    <legend>✨ Smart replies</legend>
-    <p class="muted">Reply to the daily email in plain language — "Sanjo has a
-      ride", "Ryan drives Lara to ATA", "the party runs 1:15–5" — and the plan
-      updates itself. This is handled by the service; there's nothing for you
-      to set up.</p>
-  </fieldset>
+    <!-- 6: google sign-in (optional) -->
+    <section class="wizard-step">
+      <div class="step-kicker"></div>
+      <legend>Connect Google 🔗 <span class="optional-pill">optional</span></legend>
+      <label>Google OAuth client JSON <span class="muted">(paste the downloaded file)</span>
+        <textarea name="google_credentials" rows="4"
+          placeholder='{"installed":{"client_id":"...","client_secret":"..."}}'></textarea>
+      </label>
+      <p class="muted">Already connected? Skip this. After saving a new file you'll
+        do a one-time Google sign-in in the terminal.</p>
+    </section>
 
-  <fieldset>
-    <legend>Outlook / Microsoft 365 <span class="muted">(optional)</span></legend>
-    <label>Outlook calendar owner <span class="muted">(a driver's name; leave blank to skip)</span>
-      <input type="text" name="outlook_owner" value="{{ existing.outlook_owner }}">
-    </label>
-    <label>Microsoft client ID
-      <input type="text" name="ms_client_id" value="{{ existing.ms_client_id }}">
-    </label>
-    <label>Microsoft tenant ID
-      <input type="text" name="ms_tenant_id" value="{{ existing.ms_tenant_id or 'common' }}">
-    </label>
-  </fieldset>
+    <!-- 7: outlook (optional) -->
+    <section class="wizard-step">
+      <div class="step-kicker"></div>
+      <legend>Outlook / Microsoft 365 🗂️ <span class="optional-pill">optional</span></legend>
+      <label>Outlook calendar owner <span class="muted">(a driver's name; blank to skip)</span>
+        <input type="text" name="outlook_owner" value="{{ existing.outlook_owner }}">
+      </label>
+      <label>Microsoft client ID
+        <input type="text" name="ms_client_id" value="{{ existing.ms_client_id }}">
+      </label>
+      <label>Microsoft tenant ID
+        <input type="text" name="ms_tenant_id" value="{{ existing.ms_tenant_id or 'common' }}">
+      </label>
+    </section>
 
-  <fieldset>
-    <legend>TeamSnap <span class="muted">(optional — for a child's sports team)</span></legend>
-    <label>TeamSnap access token
-      <input type="text" name="teamsnap_token" placeholder="leave blank to skip">
-    </label>
-    <label>Team name
-      <input type="text" name="teamsnap_team" value="{{ existing.teamsnap_team }}">
-    </label>
-    <label>Which child is on the team?
-      <input type="text" name="teamsnap_person" value="{{ existing.teamsnap_person }}">
-    </label>
-  </fieldset>
+    <!-- 8: teamsnap (optional) -->
+    <section class="wizard-step">
+      <div class="step-kicker"></div>
+      <legend>TeamSnap ⚽ <span class="optional-pill">optional</span></legend>
+      <p class="muted">For a child's sports team.</p>
+      <label>TeamSnap access token
+        <input type="text" name="teamsnap_token" placeholder="leave blank to skip">
+      </label>
+      <label>Team name
+        <input type="text" name="teamsnap_team" value="{{ existing.teamsnap_team }}">
+      </label>
+      <label>Which child is on the team?
+        <input type="text" name="teamsnap_person" value="{{ existing.teamsnap_person }}">
+      </label>
+    </section>
 
-  <button type="submit" class="primary">🚗 Lock in the route</button>
+    <!-- 9: finish -->
+    <section class="wizard-step">
+      <div class="step-kicker"></div>
+      <legend>You're all set! 🎉</legend>
+      <div class="cta">
+        <h3>✨ Smart replies are on the house</h3>
+        <p class="muted">Reply to the daily email in plain language — "Sanjo has a
+          ride", "Ryan drives Lara to ATA", "the party runs 1:15–5" — and the plan
+          updates itself. Handled by the service; nothing for you to set up.</p>
+      </div>
+      <p class="muted">Tap <strong>Save &amp; finish</strong> below and the fairy
+        gets to work.</p>
+    </section>
+
+  </div>
+
+  <div class="wizard-nav">
+    <button id="backBtn" type="button" class="ghost">← Back</button>
+    <span class="spacer"></span>
+    <button id="nextBtn" type="button">Next →</button>
+    <button id="saveBtn" type="submit" style="display:none">✨ Save &amp; finish</button>
+  </div>
+
+  <div class="progress-wrap" id="progWrap">
+    <div class="progress-meta" id="progMeta"><span>0 of 4 answered</span><span>0%</span></div>
+    <div class="progress"><div class="bar" id="progBar"></div></div>
+  </div>
 </form>
 
 <template id="person-template">
   <div class="person-row people-grid">
-    <input type="text" name="person_name" placeholder="e.g. Alex" required>
+    <input type="text" name="person_name" placeholder="e.g. Alex">
     <select name="person_role">
       <option value="driver">Driver / parent</option>
       <option value="child">Child (non-driver)</option>
     </select>
     <input type="text" name="person_calid" placeholder="name@gmail.com">
-    <button type="button" class="remove" onclick="this.closest('.person-row').remove()">✕</button>
+    <button type="button" class="remove" onclick="this.closest('.person-row').remove();sync()">✕</button>
   </div>
 </template>
 <template id="extra-template">
   <div class="extra-row extra-grid">
     <input type="text" name="extra_label" placeholder="e.g. Family">
     <input type="text" name="extra_calid" placeholder="...@group.calendar.google.com">
-    <button type="button" class="remove" onclick="this.closest('.extra-row').remove()">✕</button>
+    <button type="button" class="remove" onclick="this.closest('.extra-row').remove();sync()">✕</button>
   </div>
 </template>
 <template id="recipient-template">
   <div class="recipient-row">
     <input type="email" name="recipient" placeholder="email@example.com">
-    <button type="button" class="remove" onclick="this.closest('.recipient-row').remove()">✕</button>
+    <button type="button" class="remove" onclick="this.closest('.recipient-row').remove();sync()">✕</button>
   </div>
 </template>
 
 <script>
-  function cloneInto(id, containerId) {
-    const tpl = document.getElementById(id);
-    document.getElementById(containerId).appendChild(tpl.content.cloneNode(true));
+(function () {
+  const steps = Array.from(document.querySelectorAll('.wizard-step'));
+  const required = steps.filter(s => s.dataset.req);
+  const backBtn = document.getElementById('backBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const bar = document.getElementById('progBar');
+  const wrap = document.getElementById('progWrap');
+  const meta = document.getElementById('progMeta');
+  let cur = 0;
+
+  // label each step "Step N of M"
+  steps.forEach((s, i) => { s.querySelector('.step-kicker').textContent = `Step ${i + 1} of ${steps.length}`; });
+
+  function validate(step) {
+    const req = step.dataset.req;
+    if (req === 'home')
+      return step.querySelector('[name=home_address]').value.trim() ? '' : 'Please enter your home address.';
+    if (req === 'cars') {
+      const v = parseInt(step.querySelector('[name=num_cars]').value, 10);
+      return v >= 1 ? '' : 'Enter at least one car.';
+    }
+    if (req === 'people') {
+      const rows = Array.from(step.querySelectorAll('.person-row'));
+      const named = rows.filter(r => r.querySelector('[name=person_name]').value.trim());
+      if (!named.length) return 'Add at least one family member.';
+      const hasDriver = named.some(r => r.querySelector('[name=person_role]').value === 'driver');
+      if (!hasDriver) return 'At least one person needs to be a driver / parent.';
+      return '';
+    }
+    if (req === 'recipients') {
+      const emails = Array.from(step.querySelectorAll('[name=recipient]'))
+        .map(i => i.value.trim()).filter(Boolean);
+      if (!emails.length) return 'Add at least one email to receive the plan.';
+      if (!emails.every(e => /.+@.+\..+/.test(e))) return 'One of those doesn’t look like an email.';
+      return '';
+    }
+    return '';
   }
-  function addPerson()    { cloneInto('person-template', 'people'); }
-  function addExtra()     { cloneInto('extra-template', 'extras'); }
-  function addRecipient() { cloneInto('recipient-template', 'recipients'); }
-  // Ensure there's always at least one empty row to start with.
-  window.addEventListener('DOMContentLoaded', function () {
-    if (!document.querySelector('#people .person-row')) addPerson();
-    if (!document.querySelector('#recipients .recipient-row')) addRecipient();
+
+  function updateProgress() {
+    const done = required.filter(s => !validate(s)).length;
+    const pct = Math.round(done / required.length * 100);
+    bar.style.width = pct + '%';
+    wrap.classList.toggle('full', pct === 100);
+    meta.firstElementChild.textContent = `${done} of ${required.length} answered`;
+    meta.lastElementChild.textContent = pct + '%';
+  }
+
+  function show(i) {
+    cur = Math.max(0, Math.min(i, steps.length - 1));
+    steps.forEach((s, idx) => s.classList.toggle('active', idx === cur));
+    backBtn.style.visibility = cur === 0 ? 'hidden' : 'visible';
+    const last = cur === steps.length - 1;
+    nextBtn.style.display = last ? 'none' : 'inline-block';
+    saveBtn.style.display = last ? 'inline-block' : 'none';
+    steps[cur].querySelector('.field-error') && (steps[cur].querySelector('.field-error').textContent = '');
+    document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  nextBtn.addEventListener('click', () => {
+    const err = validate(steps[cur]);
+    const slot = steps[cur].querySelector('.field-error');
+    if (err) { if (slot) slot.textContent = err; return; }
+    show(cur + 1);
   });
+  backBtn.addEventListener('click', () => show(cur - 1));
+
+  document.getElementById('wizard').addEventListener('input', updateProgress);
+
+  document.getElementById('wizard').addEventListener('submit', (e) => {
+    for (let i = 0; i < steps.length; i++) {
+      const err = validate(steps[i]);
+      if (err) {
+        e.preventDefault();
+        show(i);
+        const slot = steps[i].querySelector('.field-error');
+        if (slot) slot.textContent = err;
+        return;
+      }
+    }
+  });
+
+  // dynamic rows
+  window.sync = updateProgress;
+  function cloneInto(id, containerId) {
+    document.getElementById(containerId).appendChild(
+      document.getElementById(id).content.cloneNode(true));
+    updateProgress();
+  }
+  window.addPerson = () => cloneInto('person-template', 'people');
+  window.addExtra = () => cloneInto('extra-template', 'extras');
+  window.addRecipient = () => cloneInto('recipient-template', 'recipients');
+
+  if (!document.querySelector('#people .person-row')) addPerson();
+  if (!document.querySelector('#recipients .recipient-row')) addRecipient();
+  show(0);
+  updateProgress();
+})();
 </script>
 {% endblock %}

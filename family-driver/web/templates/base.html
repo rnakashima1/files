@@ -3,14 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Family Driving Planner{% endblock %}</title>
+  <title>{% block title %}Fairied.co{% endblock %} · Fairied.co</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <div class="card">
-    <header>
-      <h1>🚗 Family Driving Planner</h1>
-      <p class="tagline">Plot the routes, share the wheel</p>
+    <header class="brand">
+      <div class="brand-row">
+        <!-- fairy logo -->
+        <svg class="logo fairy-bob" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- wings -->
+          <g opacity="0.85">
+            <ellipse cx="22" cy="30" rx="13" ry="18" fill="#b79bff" transform="rotate(-18 22 30)"/>
+            <ellipse cx="42" cy="30" rx="13" ry="18" fill="#ff9ccb" transform="rotate(18 42 30)"/>
+          </g>
+          <!-- dress -->
+          <path d="M32 30 L24 52 L40 52 Z" fill="#ff6fae"/>
+          <!-- head -->
+          <circle cx="32" cy="24" r="8" fill="#ffd9b8"/>
+          <path d="M24 22 q8 -12 16 0 q-8 -4 -16 0Z" fill="#6c4cff"/>
+          <!-- wand -->
+          <line x1="40" y1="40" x2="54" y2="26" stroke="#caa6ff" stroke-width="3" stroke-linecap="round"/>
+          <path d="M54 18 l2 5 5 2 -5 2 -2 5 -2-5 -5-2 5-2 Z" fill="#ffcf4d"/>
+        </svg>
+        <h1>Fairied<span class="dot">.co</span></h1>
+      </div>
+      <p class="tagline">The carpool fairy plans your family's day ✨</p>
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
