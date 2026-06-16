@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Google connected' if ok else 'Google sign-in' }}{% endblock %}
+{% block content %}
+{% if ok %}
+<h2>✨ Google connected!</h2>
+<p>{{ message }}</p>
+<p class="muted">You can close this tab and head back to setup — the fairy has
+  what she needs.</p>
+{% else %}
+<h2>Hmm — not connected</h2>
+<p class="muted">{{ message }}</p>
+{% endif %}
+<p style="margin-top:16px"><a class="button" href="{{ url_for('onboard') }}">Back to setup</a></p>
+{% endblock %}

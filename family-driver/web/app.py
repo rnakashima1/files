@@ -26,10 +26,23 @@ from zoneinfo import ZoneInfo
 from flask import (Flask, flash, redirect, render_template, request,
                    session, url_for)
 
+from google_auth_oauthlib.flow import Flow
+
 import config
 from web import env_writer
 from web.auth import UserStore, AuthError
 from web.mailer import send_email
+
+# Allow the OAuth redirect over http on localhost, and tolerate Google returning
+# scopes in a different order / with extras.
+os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
+
+GOOGLE_SCOPES = [
+    "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.readonly",
+]
 
 app = Flask(__name__)
 app.secret_key = env_writer.ensure_secret_key()
@@ -216,7 +229,8 @@ def onboard():
         "ms_tenant_id": config.MS_TENANT_ID,
         "outlook_owner": (config.OUTLOOK_CALENDAR_MAP or {}).get("me", ""),
     }
-    return render_template("onboard.html", account=session.get("user"), existing=existing)
+    return render_template("onboard.html", account=session.get("user"), existing=existing,
+                           google_connected=os.path.exists(config.GOOGLE_OAUTH_TOKEN_FILE))
 
 
 def _save_onboarding():
@@ -349,6 +363,46 @@ def _pacific_today():
 
 
 # --------------------------------------------------------------------------
+@app.route("/connect-google")
+@login_required
+def connect_google():
+    if not os.path.exists(config.GOOGLE_OAUTH_CLIENT_SECRETS_FILE):
+        return render_template("google_connected.html", ok=False,
+            message="Google sign-in isn't set up on the server yet (missing client credentials).")
+    flow = Flow.from_client_secrets_file(
+        config.GOOGLE_OAUTH_CLIENT_SECRETS_FILE, scopes=GOOGLE_SCOPES,
+        redirect_uri=url_for("google_callback", _external=True))
+    auth_url, state = flow.authorization_url(
+        access_type="offline", include_granted_scopes="true", prompt="consent")
+    session["google_oauth_state"] = state
+    return redirect(auth_url)
+
+
+@app.route("/google/callback")
+@login_required
+def google_callback():
+    if request.args.get("error"):
+        return render_template("google_connected.html", ok=False,
+            message="Google sign-in was cancelled — you can close this tab and try again.")
+    try:
+        flow = Flow.from_client_secrets_file(
+            config.GOOGLE_OAUTH_CLIENT_SECRETS_FILE, scopes=GOOGLE_SCOPES,
+            state=session.get("google_oauth_state"),
+            redirect_uri=url_for("google_callback", _external=True))
+        flow.fetch_token(authorization_response=request.url)
+        with open(config.GOOGLE_OAUTH_TOKEN_FILE, "w") as f:
+            f.write(flow.credentials.to_json())
+        try:
+            os.chmod(config.GOOGLE_OAUTH_TOKEN_FILE, 0o600)
+        except OSError:
+            pass
+    except Exception as exc:  # noqa: BLE001
+        return render_template("google_connected.html", ok=False,
+            message=f"Couldn't finish Google sign-in: {exc}")
+    return render_template("google_connected.html", ok=True,
+        message="Your Google Calendar and Gmail are connected. 🎉")
+
+
 def _send_verification(email, code):
     result = send_email(
         email, "Your driving-planner verification code",
