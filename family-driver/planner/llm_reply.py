@@ -93,8 +93,7 @@ def interpret(text, events):
         }
         resp = client.messages.create(
             model=config.ANTHROPIC_MODEL,
-            max_tokens=4096,
-            thinking={"type": "adaptive"},
+            max_tokens=1024,
             system=SYSTEM,
             messages=[{"role": "user", "content": json.dumps(payload, indent=2)}],
         )
