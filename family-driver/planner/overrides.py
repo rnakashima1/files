@@ -80,6 +80,8 @@ def apply_overrides(events, day_key: str):
                     e.person = fix["person"]
                 if fix.get("driver"):
                     e.forced_driver = fix["driver"]
+                if fix.get("family_trip"):
+                    e.family_trip = True
                 if fix.get("start"):
                     e.start = _retime(e.start, fix["start"], day_key)
                 if fix.get("end"):

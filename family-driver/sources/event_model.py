@@ -18,6 +18,7 @@ class Event:
     virtual: bool = False    # Zoom/Teams/Meet — no driving, no location question
     skip: bool = False       # override: rider has another ride — exclude from plan
     forced_driver: Optional[str] = None  # override: this driver must handle it
+    family_trip: bool = False  # override: a driver taking the whole family along
     raw: dict = field(default_factory=dict)
 
     def overlaps(self, other: "Event") -> bool:
