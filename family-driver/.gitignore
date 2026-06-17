@@ -1,8 +1,0 @@
-__pycache__/
-*.pyc
-.env
-token.json
-credentials.json
-msal_token_cache.bin
-.venv/
-output/
