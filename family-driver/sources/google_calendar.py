@@ -41,6 +41,20 @@ def _get_credentials():
     return creds
 
 
+def _resolve_person(label):
+    """Map a calendar's label to a family member. An exact family name wins;
+    otherwise a label that contains a family name (e.g. 'Ryan-Work' -> 'Ryan')
+    resolves to that person, so work/other calendars are attributed correctly."""
+    family = list(config.DRIVERS) + list(config.NON_DRIVERS)
+    if label in family:
+        return label
+    low = (label or "").lower()
+    for fam in family:
+        if fam.lower() in low:
+            return fam
+    return label
+
+
 def fetch_today_events(calendar_person_map: dict, day: datetime = None):
     """calendar_person_map: {calendar_id_or_'primary': person_name}
 
@@ -55,6 +69,7 @@ def fetch_today_events(calendar_person_map: dict, day: datetime = None):
 
     events = []
     for calendar_id, person in calendar_person_map.items():
+        person = _resolve_person(person)
         resp = service.events().list(
             calendarId=calendar_id,
             timeMin=start_of_day.isoformat(),
