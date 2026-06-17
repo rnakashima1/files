@@ -55,6 +55,18 @@ def _resolve_person(label):
     return label
 
 
+def _is_declined(item):
+    """True if the event was declined — work calendars prefix the title with
+    'Declined:', and the Calendar API marks the user's own attendee with
+    responseStatus 'declined'."""
+    if (item.get("summary", "") or "").strip().lower().startswith("declined:"):
+        return True
+    for a in item.get("attendees", []) or []:
+        if a.get("self") and a.get("responseStatus") == "declined":
+            return True
+    return False
+
+
 def fetch_today_events(calendar_person_map: dict, day: datetime = None):
     """calendar_person_map: {calendar_id_or_'primary': person_name}
 
@@ -79,6 +91,8 @@ def fetch_today_events(calendar_person_map: dict, day: datetime = None):
         ).execute()
 
         for item in resp.get("items", []):
+            if _is_declined(item):
+                continue
             start_raw = item["start"].get("dateTime") or item["start"].get("date")
             end_raw = item["end"].get("dateTime") or item["end"].get("date")
             start = datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
