@@ -45,7 +45,11 @@ item once you know its ID.
 Requires Python 3.10+.
 
 ```bash
-# from a checkout of this directory
+# clone the repo
+git clone https://github.com/rnakashima1/localnewsmatters-mcp.git
+cd localnewsmatters-mcp
+
+# run it (uv installs dependencies on first run)
 uv run localnewsmatters-mcp
 # or, once installed into an environment
 pip install .
@@ -59,7 +63,7 @@ The server speaks MCP over **stdio**, which is what desktop clients expect.
 ### Claude Code
 
 ```bash
-claude mcp add localnewsmatters -- uv run --directory /absolute/path/to/localnewsmatters-mcp localnewsmatters-mcp
+claude mcp add localnewsmatters -- uv run --directory /absolute/path/to/clone/localnewsmatters-mcp localnewsmatters-mcp
 ```
 
 ### Claude Desktop (`claude_desktop_config.json`)
@@ -69,7 +73,7 @@ claude mcp add localnewsmatters -- uv run --directory /absolute/path/to/localnew
   "mcpServers": {
     "localnewsmatters": {
       "command": "uv",
-      "args": ["run", "--directory", "/absolute/path/to/localnewsmatters-mcp", "localnewsmatters-mcp"]
+      "args": ["run", "--directory", "/absolute/path/to/clone/localnewsmatters-mcp", "localnewsmatters-mcp"]
     }
   }
 }
